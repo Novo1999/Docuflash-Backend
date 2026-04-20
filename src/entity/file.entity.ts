@@ -2,9 +2,9 @@ import { DeviceInfo, FileAccessType, FileType } from '@/types/file'
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm'
 
 @Entity()
-export class File {
-  @PrimaryGeneratedColumn()
-  id!: number
+export class FileEntity {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string
 
   @Column()
   fileName!: string
