@@ -1,5 +1,6 @@
 import { errorHandler } from '@/middleware/errorHandler'
 import fileRouter from '@/routes/file.routes'
+import { uploadThingRouter } from '@/routes/uploadthing.routes'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import dotenv from 'dotenv'
@@ -24,6 +25,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 app.use('/api/files', fileRouter)
+app.use('/api/uploadthing', uploadThingRouter)
 
 app.use(errorHandler)
 

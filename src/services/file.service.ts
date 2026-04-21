@@ -12,4 +12,16 @@ const getFileById = async (id: string) => {
   return fileById
 }
 
-export { getFileById }
+const deleteFileById = async (id: string) => {
+  const fileRepository = useTypeORM(FileEntity)
+
+  const result = await fileRepository.delete({ id })
+
+  if (result.affected === 0) throw new AppError('File not found', 404)
+}
+
+const uploadFile = async () => {
+  
+}
+
+export { deleteFileById, getFileById }
