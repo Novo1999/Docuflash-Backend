@@ -33,6 +33,11 @@ const deleteFile = async (req: Request<{ id: string }>, res: Response, next: Nex
 
 const uploadFile = async (req: Request, res: Response, next: NextFunction) => {
   // upload the file to uploadthing
+  try {
+    
+  } catch (error) {
+    
+  }
   // if error catch it
   // show error if error
   // if success write to db

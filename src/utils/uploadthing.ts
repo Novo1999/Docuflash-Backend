@@ -1,16 +1,19 @@
-import { createUploadthing, type FileRouter } from "uploadthing/express";
+import { createUploadthing, type FileRouter } from 'uploadthing/express'
 
-const f = createUploadthing();
+const f = createUploadthing()
+
+const config = { maxFileSize: '16MB' as const }
 
 export const uploadRouter = {
-  imageUploader: f({
-    image: {
-      maxFileSize: "16MB",
-      maxFileCount: 1,
-    },
+  fileUploader: f({
+    pdf: config,
+    'application/vnd.ms-excel': config,
+    'application/msword': config,
+    'application/zip': config,
+    text: config,
   }).onUploadComplete((data) => {
-    console.log("upload completed", data);
+    console.log('upload completed', data)
   }),
-} satisfies FileRouter;
+} satisfies FileRouter
 
-export type OurFileRouter = typeof uploadRouter;
+export type OurFileRouter = typeof uploadRouter
