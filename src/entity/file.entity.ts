@@ -36,7 +36,7 @@ export class FileEntity {
   @Column()
   downloadCount!: number
 
-  @Column('datetime')
+  @Column('timestamp without time zone')
   expireAt!: Date
 
   @Column()

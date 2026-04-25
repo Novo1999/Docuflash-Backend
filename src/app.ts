@@ -18,14 +18,16 @@ app.use(cors())
 app.use(morgan('dev'))
 app.use(cookieParser())
 app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
-
+app.use((req, res, next) => {
+  console.log('Content-Type:', req.headers['content-type'])
+  next()
+})
+app.use('/api/uploadthing', uploadThingRouter)
 // Health Check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 app.use('/api/files', fileRouter)
-app.use('/api/uploadthing', uploadThingRouter)
 
 app.use(errorHandler)
 

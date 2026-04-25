@@ -10,6 +10,7 @@ export const uploadRouter = {
     'application/vnd.ms-excel': config,
     'application/msword': config,
     'application/zip': config,
+    'application/docbook+xml': config,
     text: config,
   }).onUploadComplete((data) => {
     console.log('upload completed', data)
