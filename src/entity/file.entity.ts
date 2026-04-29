@@ -21,7 +21,7 @@ export class FileEntity {
   @Column()
   storageKey!: string
 
-  @Column()
+  @Column({ nullable: true })
   password!: string
 
   @Column()

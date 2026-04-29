@@ -1,15 +1,21 @@
-import { deleteFileById, getFileById } from '@/services/file.service'
+import { FileEntity } from '@/entity/file.entity'
+import { deleteFileById, getFileByToken, uploadFileService } from '@/services/file.service'
+import { TypedBodyRequest } from '@/types/common'
 import createJsonResponse from '@/utils/createJsonResponse'
+import crypto from 'crypto'
 import { NextFunction, Request, Response } from 'express'
+import { DeepPartial } from 'typeorm'
 
-const getFile = async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+const getFileByShareToken = async (req: Request<{ token: string }>, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params
-    const file = await getFileById(id)
+    const { token } = req.params
+    const file = await getFileByToken(token)
+
+    const { password, storageKey, id, deviceInfo, clientId, downloadCount, ...rest } = file
 
     return createJsonResponse(res, {
       msg: 'File fetched successfully',
-      data: file,
+      data: rest,
       status: 200,
     })
   } catch (error) {
@@ -31,18 +37,21 @@ const deleteFile = async (req: Request<{ id: string }>, res: Response, next: Nex
   }
 }
 
-const uploadFile = async (req: Request, res: Response, next: NextFunction) => {
-  // upload the file to uploadthing
+const uploadFile = async (req: TypedBodyRequest<DeepPartial<FileEntity>>, res: Response, next: NextFunction) => {
   try {
-    
+    const shareToken = crypto.randomBytes(16).toString('hex')
+    const fileResponse = await uploadFileService({ ...req.body, shareToken })
+
+    const { password, storageKey, id, deviceInfo, clientId, downloadCount, ...rest } = fileResponse
+
+    return createJsonResponse(res, {
+      msg: 'File uploaded',
+      data: rest,
+      status: 200,
+    })
   } catch (error) {
-    
+    next(error)
   }
-  // if error catch it
-  // show error if error
-  // if success write to db
-  // if error catch it
-  // handle if the file uploads successfully but the DB write fails (delete that file basically)
 }
 
-export { deleteFile, getFile, uploadFile }
+export { deleteFile, getFileByShareToken, uploadFile }

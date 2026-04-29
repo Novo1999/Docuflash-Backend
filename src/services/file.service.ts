@@ -1,15 +1,16 @@
 import { useTypeORM } from '@/data-source'
 import { FileEntity } from '@/entity/file.entity'
 import { AppError } from '@/errors/AppError'
+import { DeepPartial } from 'typeorm'
 
-const getFileById = async (id: string) => {
+const getFileByToken = async (token: string) => {
   const fileRepository = useTypeORM(FileEntity)
 
-  const fileById = await fileRepository.findOneBy({ id })
+  const fileByToken = await fileRepository.findOneBy({ shareToken: token })
 
-  if (!fileById) throw new AppError('File not found', 404)
+  if (!fileByToken) throw new AppError('File not found', 404)
 
-  return fileById
+  return fileByToken
 }
 
 const deleteFileById = async (id: string) => {
@@ -20,8 +21,14 @@ const deleteFileById = async (id: string) => {
   if (result.affected === 0) throw new AppError('File not found', 404)
 }
 
-const uploadFile = async () => {
-  
+const uploadFileService = async (payload: DeepPartial<FileEntity>) => {
+  const fileRepository = useTypeORM(FileEntity)
+
+  const file = fileRepository.create(payload)
+
+  const savedFile = await fileRepository.save(file)
+
+  return savedFile
 }
 
-export { deleteFileById, getFileById }
+export { deleteFileById, getFileByToken, uploadFileService }
