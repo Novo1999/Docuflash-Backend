@@ -1,6 +1,6 @@
 import { FileEntity } from '@/entity/file.entity'
 import { AppError } from '@/errors/AppError'
-import { deleteFileById, getFileByToken, uploadFileService } from '@/services/file.service'
+import { deleteFileById, getFileByToken, getFileDownloadUrl, uploadFileService, verifyFilePassword } from '@/services/file.service'
 import { TypedBodyRequest } from '@/types/common'
 import createJsonResponse from '@/utils/createJsonResponse'
 import bcrypt from 'bcryptjs'
@@ -14,11 +14,11 @@ const getFileByShareToken = async (req: Request<{ token: string }>, res: Respons
     const { token } = req.params
     const file = await getFileByToken(token)
 
-    const { password, storageKey, id, deviceInfo, clientId, downloadCount, ...rest } = file
+    const { password, storageKey, id, deviceInfo, clientId, ...rest } = file
 
     return createJsonResponse(res, {
       msg: 'File fetched successfully',
-      data: rest,
+      data: { ...rest, uploadDate: rest.createdAt },
       status: 200,
     })
   } catch (error) {
@@ -75,4 +75,42 @@ const uploadFile = async (req: TypedBodyRequest<DeepPartial<FileEntity>>, res: R
   }
 }
 
-export { deleteFile, getFileByShareToken, uploadFile }
+const verifyPassword = async (
+  req: Request<{ token: string }, {}, { password: string }>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { token } = req.params
+    const { password } = req.body
+
+    if (!password) throw new AppError('Password is required', StatusCodes.BAD_REQUEST)
+
+    const result = await verifyFilePassword(token, password)
+
+    return createJsonResponse(res, {
+      msg: 'Password verified',
+      data: result,
+      status: 200,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+const downloadFile = async (req: Request<{ token: string }>, res: Response, next: NextFunction) => {
+  try {
+    const { token } = req.params
+    const result = await getFileDownloadUrl(token)
+
+    return createJsonResponse(res, {
+      msg: 'Download URL fetched',
+      data: result,
+      status: 200,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export { deleteFile, downloadFile, getFileByShareToken, uploadFile, verifyPassword }
+

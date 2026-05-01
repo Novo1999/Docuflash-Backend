@@ -1,5 +1,5 @@
 import { DeviceInfo, FileAccessType, FileType } from '@/types/file'
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm'
+import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm'
 
 @Entity()
 export class FileEntity {
@@ -44,4 +44,7 @@ export class FileEntity {
 
   @Column('json')
   deviceInfo!: DeviceInfo
+
+  @CreateDateColumn()
+  createdAt!: Date
 }
