@@ -3,6 +3,7 @@ export enum FileType {
   XLS = 'xls',
   TXT = 'txt',
   ZIP = 'zip',
+  DOCX = 'docx',
 }
 
 export enum FileAccessType {
