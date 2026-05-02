@@ -1,6 +1,7 @@
 import dotenv from 'dotenv'
 import 'reflect-metadata'
 import { DataSource, EntityTarget, ObjectLiteral, Repository } from 'typeorm'
+import { FileEntity } from './entity/file.entity'
 
 dotenv.config()
 
@@ -13,10 +14,11 @@ export const AppDataSource = new DataSource({
   database: process.env.PGSQL_DATABASE || 'postgres',
   synchronize: process.env.NODE_ENV === 'development',
   logging: process.env.NODE_ENV === 'development',
-  entities: ['src/entity/**/*.ts'],
-  migrations: ['src/migration/**/*.ts'],
-  subscribers: ['src/subscriber/**/*.ts'],
+  entities: [FileEntity],
+  migrations: [],
+  subscribers: [],
 })
+
 export function useTypeORM<T extends ObjectLiteral>(entity: EntityTarget<T>): Repository<T> {
   if (!AppDataSource || !AppDataSource.isInitialized) {
     throw new Error('TypeORM has not been initialized!')
