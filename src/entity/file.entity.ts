@@ -1,4 +1,4 @@
-import { DeviceInfo, FileAccessType, FileType } from '@/types/file'
+import { DeviceInfo, FileAccessType, FileType } from '../types/file'
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm'
 
 @Entity()

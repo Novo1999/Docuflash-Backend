@@ -1,4 +1,4 @@
-import { deleteFile, downloadFile, getFileByShareToken, uploadFile, verifyPassword } from '@/controllers/file.controller'
+import { deleteFile, downloadFile, getFileByShareToken, uploadFile, verifyPassword } from '../controllers/file.controller'
 import { Router } from 'express'
 
 const router = Router()

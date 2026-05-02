@@ -1,7 +1,7 @@
-import { useTypeORM } from '@/data-source'
-import { FileEntity } from '@/entity/file.entity'
-import { AppError } from '@/errors/AppError'
-import { FileAccessType } from '@/types/file'
+import { useTypeORM } from '../data-source'
+import { FileEntity } from '../entity/file.entity'
+import { AppError } from '../errors/AppError'
+import { FileAccessType } from '../types/file'
 import bcrypt from 'bcryptjs'
 import { DeepPartial } from 'typeorm'
 

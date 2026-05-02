@@ -1,4 +1,4 @@
-import { uploadRouter } from '@/utils/uploadthing'
+import { uploadRouter } from '../utils/uploadthing'
 
 import { createRouteHandler } from 'uploadthing/express'
 
