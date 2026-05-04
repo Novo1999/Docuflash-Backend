@@ -1,6 +1,13 @@
 import { FileEntity } from '../entity/file.entity'
 import { AppError } from '../errors/AppError'
-import { deleteFileById, getFileByToken, getFileDownloadUrl, uploadFileService, verifyFilePassword } from '../services/file.service'
+import {
+  deleteFileById,
+  deleteFileByShareToken,
+  getFileByToken,
+  getFileDownloadUrl,
+  uploadFileService,
+  verifyFilePassword,
+} from '../services/file.service'
 import { TypedBodyRequest } from '../types/common'
 import createJsonResponse from '../utils/createJsonResponse'
 import bcrypt from 'bcryptjs'
@@ -112,5 +119,27 @@ const downloadFile = async (req: Request<{ token: string }>, res: Response, next
   }
 }
 
-export { deleteFile, downloadFile, getFileByShareToken, uploadFile, verifyPassword }
+const deleteFileByShareTokenController = async (req: Request<{ token: string }>, res: Response, next: NextFunction) => {
+  try {
+    const { token } = req.params
+    await deleteFileByShareToken(token)
+
+    return createJsonResponse(res, {
+      msg: 'File deleted successfully',
+      data: null,
+      status: 200,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export {
+  deleteFile,
+  deleteFileByShareTokenController as deleteFileByShareToken,
+  downloadFile,
+  getFileByShareToken,
+  uploadFile,
+  verifyPassword,
+}
 

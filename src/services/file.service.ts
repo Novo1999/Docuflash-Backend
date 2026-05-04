@@ -65,4 +65,19 @@ const getFileDownloadUrl = async (token: string) => {
   return { fileUrl: `https://utfs.io/f/${file.storageKey}` }
 }
 
-export { deleteFileById, getFileByToken, getFileDownloadUrl, uploadFileService, verifyFilePassword }
+const deleteFileByShareToken = async (token: string) => {
+  const fileRepository = useTypeORM(FileEntity)
+
+  const result = await fileRepository.delete({ shareToken: token })
+
+  if (result.affected === 0) throw new AppError('File not found', 404)
+}
+
+export {
+  deleteFileById,
+  deleteFileByShareToken,
+  getFileByToken,
+  getFileDownloadUrl,
+  uploadFileService,
+  verifyFilePassword,
+}
