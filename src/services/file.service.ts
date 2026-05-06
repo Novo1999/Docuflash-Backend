@@ -1,9 +1,10 @@
+import bcrypt from 'bcryptjs'
+import { DeepPartial } from 'typeorm'
+import { UTApi } from 'uploadthing/server'
 import { useTypeORM } from '../data-source'
 import { FileEntity } from '../entity/file.entity'
 import { AppError } from '../errors/AppError'
 import { FileAccessType } from '../types/file'
-import bcrypt from 'bcryptjs'
-import { DeepPartial } from 'typeorm'
 
 const getFileByToken = async (token: string) => {
   const fileRepository = useTypeORM(FileEntity)
@@ -73,11 +74,29 @@ const deleteFileByShareToken = async (token: string) => {
   if (result.affected === 0) throw new AppError('File not found', 404)
 }
 
-export {
-  deleteFileById,
-  deleteFileByShareToken,
-  getFileByToken,
-  getFileDownloadUrl,
-  uploadFileService,
-  verifyFilePassword,
+export const deleteExpiredFiles = async () => {
+  const fileRepository = useTypeORM(FileEntity)
+
+  const expiredFiles = await fileRepository
+    .createQueryBuilder('file')
+    .where('file.expireAt <= :now', {
+      now: new Date(),
+    })
+    .getMany()
+
+  if (!expiredFiles.length) {
+    console.warn('No expired files')
+    return { deleted: 0 }
+  }
+
+  const utapi = new UTApi()
+  const storageKeys = expiredFiles.map((f) => f.storageKey)
+  await utapi.deleteFiles(storageKeys)
+
+  const ids = expiredFiles.map((f) => f.id)
+  await fileRepository.delete(ids)
+
+  return { deleted: expiredFiles.length }
 }
+
+export { deleteFileById, deleteFileByShareToken, getFileByToken, getFileDownloadUrl, uploadFileService, verifyFilePassword }

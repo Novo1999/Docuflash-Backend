@@ -6,7 +6,7 @@ import { DeepPartial } from 'typeorm'
 import { UTApi } from 'uploadthing/server'
 import { FileEntity } from '../entity/file.entity'
 import { AppError } from '../errors/AppError'
-import { deleteFileById, deleteFileByShareToken, getFileByToken, getFileDownloadUrl, uploadFileService, verifyFilePassword } from '../services/file.service'
+import { deleteExpiredFiles, deleteFileById, deleteFileByShareToken, getFileByToken, getFileDownloadUrl, uploadFileService, verifyFilePassword } from '../services/file.service'
 import { TypedBodyRequest } from '../types/common'
 import createJsonResponse from '../utils/createJsonResponse'
 
@@ -134,4 +134,25 @@ const deleteFileByShareTokenController = async (req: Request<{ token: string }>,
   }
 }
 
-export { deleteFile, deleteFileByShareTokenController as deleteFileByShareToken, downloadFile, getFileByShareToken, uploadFile, verifyPassword }
+const cleanupExpiredFiles = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const apiKey = req.headers['x-cleanup-api-key']
+    if (apiKey !== process.env.CLEANUP_API_KEY) {
+      throw new AppError('Unauthorized', StatusCodes.UNAUTHORIZED)
+    }
+
+    const result = await deleteExpiredFiles()
+
+    console.log('CLEANUP', result)
+
+    return createJsonResponse(res, {
+      msg: `Cleanup complete`,
+      data: result,
+      status: 200,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export { cleanupExpiredFiles, deleteFile, deleteFileByShareTokenController as deleteFileByShareToken, downloadFile, getFileByShareToken, uploadFile, verifyPassword }

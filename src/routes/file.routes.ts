@@ -1,4 +1,6 @@
+import { Router } from 'express'
 import {
+  cleanupExpiredFiles,
   deleteFile,
   deleteFileByShareToken,
   downloadFile,
@@ -6,7 +8,6 @@ import {
   uploadFile,
   verifyPassword,
 } from '../controllers/file.controller'
-import { Router } from 'express'
 
 const router = Router()
 
@@ -16,4 +17,5 @@ router.delete('/:id', deleteFile)
 router.delete('/token/:token', deleteFileByShareToken)
 router.post('/:token/verify', verifyPassword)
 router.get('/:token/download', downloadFile)
+router.post('/cleanup-expired', cleanupExpiredFiles)
 export default router
