@@ -1,20 +1,14 @@
-import { FileEntity } from '../entity/file.entity'
-import { AppError } from '../errors/AppError'
-import {
-  deleteFileById,
-  deleteFileByShareToken,
-  getFileByToken,
-  getFileDownloadUrl,
-  uploadFileService,
-  verifyFilePassword,
-} from '../services/file.service'
-import { TypedBodyRequest } from '../types/common'
-import createJsonResponse from '../utils/createJsonResponse'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { DeepPartial } from 'typeorm'
+import { UTApi } from 'uploadthing/server'
+import { FileEntity } from '../entity/file.entity'
+import { AppError } from '../errors/AppError'
+import { deleteFileById, deleteFileByShareToken, getFileByToken, getFileDownloadUrl, uploadFileService, verifyFilePassword } from '../services/file.service'
+import { TypedBodyRequest } from '../types/common'
+import createJsonResponse from '../utils/createJsonResponse'
 
 const getFileByShareToken = async (req: Request<{ token: string }>, res: Response, next: NextFunction) => {
   try {
@@ -82,11 +76,7 @@ const uploadFile = async (req: TypedBodyRequest<DeepPartial<FileEntity>>, res: R
   }
 }
 
-const verifyPassword = async (
-  req: Request<{ token: string }, {}, { password: string }>,
-  res: Response,
-  next: NextFunction
-) => {
+const verifyPassword = async (req: Request<{ token: string }, {}, { password: string }>, res: Response, next: NextFunction) => {
   try {
     const { token } = req.params
     const { password } = req.body
@@ -122,6 +112,16 @@ const downloadFile = async (req: Request<{ token: string }>, res: Response, next
 const deleteFileByShareTokenController = async (req: Request<{ token: string }>, res: Response, next: NextFunction) => {
   try {
     const { token } = req.params
+    const file = await getFileByToken(token)
+
+    if (!file) {
+      throw new AppError('File not found', StatusCodes.BAD_REQUEST)
+    }
+
+    const { storageKey } = file
+    const utapi = new UTApi()
+    await utapi.deleteFiles(storageKey)
+
     await deleteFileByShareToken(token)
 
     return createJsonResponse(res, {
@@ -134,12 +134,4 @@ const deleteFileByShareTokenController = async (req: Request<{ token: string }>,
   }
 }
 
-export {
-  deleteFile,
-  deleteFileByShareTokenController as deleteFileByShareToken,
-  downloadFile,
-  getFileByShareToken,
-  uploadFile,
-  verifyPassword,
-}
-
+export { deleteFile, deleteFileByShareTokenController as deleteFileByShareToken, downloadFile, getFileByShareToken, uploadFile, verifyPassword }
