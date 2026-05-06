@@ -1,3 +1,4 @@
+# .github/workflows/cleanup-expired-files.yaml
 name: Cleanup Expired Files
 
 on:
@@ -12,18 +13,30 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: Call cleanup endpoint
-  run: |
-    response=$(curl --silent --show-error --fail \
-      --request POST \
-      --header "x-cleanup-api-key: ${{ secrets.CLEANUP_API_KEY }}" \
-      --header "Content-Type: application/json" \
-      "${{ secrets.API_BASE_URL }}/api/files/cleanup-expired")
+      - name: Validate secrets
+        run: |
+          if [ -z "${{ secrets.API_BASE_URL }}" ]; then
+            echo "ERROR: API_BASE_URL secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.CLEANUP_API_KEY }}" ]; then
+            echo "ERROR: CLEANUP_API_KEY secret is not set"
+            exit 1
+          fi
+          echo "Both secrets are present"
 
-    echo "Response: $response"
-    deleted=$(echo "$response" | jq -r '.data.deleted')
-    echo "Files deleted: $deleted"
+      - name: Call cleanup endpoint
+        run: |
+          response=$(curl --silent --show-error --fail \
+            --request POST \
+            --header "x-cleanup-api-key: ${{ secrets.CLEANUP_API_KEY }}" \
+            --header "Content-Type: application/json" \
+            "${{ secrets.API_BASE_URL }}/api/files/cleanup-expired")
+
+          echo "Response: $response"
+          deleted=$(echo "$response" | jq -r '.data.deleted')
+          echo "Files deleted: $deleted"
 
       - name: Report failure
         if: failure()
-        run: echo "Cleanup job failed — check your API logs"
+        run: echo "Cleanup job failed — check your API logs on Vercel"
