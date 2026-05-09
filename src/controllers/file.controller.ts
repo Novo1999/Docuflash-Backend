@@ -9,6 +9,7 @@ import { AppError } from '../errors/AppError'
 import { deleteExpiredFiles, deleteFileById, deleteFileByShareToken, getFileByToken, getFileDownloadUrl, uploadFileService, verifyFilePassword } from '../services/file.service'
 import { TypedBodyRequest } from '../types/common'
 import createJsonResponse from '../utils/createJsonResponse'
+import { decryptStorageKey, encryptStorageKey } from '../utils/fileProtection'
 
 const getFileByShareToken = async (req: Request<{ token: string }>, res: Response, next: NextFunction) => {
   try {
@@ -51,17 +52,25 @@ const uploadFile = async (req: TypedBodyRequest<DeepPartial<FileEntity>>, res: R
     }
 
     let hashedPassword: string | undefined
+    let encryptedStorageKey: string | undefined
+    let salt: string | undefined
 
     if (body.accessType === 'protected' && body.password) {
-      const salt = bcrypt.genSaltSync(10)
+      salt = bcrypt.genSaltSync(10)
       hashedPassword = bcrypt.hashSync(body.password, salt)
+      encryptedStorageKey = encryptStorageKey(body.storageKey!, body.password, salt)
     }
+
+    const masterEncryptedStorageKey = encryptStorageKey(body.storageKey!, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!)
 
     const fileResponse = await uploadFileService({
       ...body,
       downloadCount: body.downloadCount ?? 0,
       password: hashedPassword,
       shareToken,
+      storageKey: encryptedStorageKey ?? body.storageKey,
+      masterEncryptedStorageKey,
+      salt,
     })
 
     const { password, storageKey, id, deviceInfo, clientId, downloadCount, ...rest } = fileResponse
@@ -118,8 +127,10 @@ const deleteFileByShareTokenController = async (req: Request<{ token: string }>,
       throw new AppError('File not found', StatusCodes.BAD_REQUEST)
     }
 
-    const { storageKey } = file
+    const { masterEncryptedStorageKey } = file
     const utapi = new UTApi()
+
+    const storageKey = decryptStorageKey(masterEncryptedStorageKey, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!)
     await utapi.deleteFiles(storageKey)
 
     await deleteFileByShareToken(token)

@@ -1,5 +1,5 @@
-import { DeviceInfo, FileAccessType, FileType } from '../types/file'
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm'
+import { DeviceInfo, FileAccessType, FileType } from '../types/file'
 
 @Entity()
 export class FileEntity {
@@ -26,6 +26,12 @@ export class FileEntity {
 
   @Column()
   clientId!: string
+
+  @Column()
+  salt!: string
+
+  @Column({ nullable: true })
+  masterEncryptedStorageKey!: string
 
   @Column({
     type: 'enum',

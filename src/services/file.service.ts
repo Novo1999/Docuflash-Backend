@@ -5,6 +5,7 @@ import { useTypeORM } from '../data-source'
 import { FileEntity } from '../entity/file.entity'
 import { AppError } from '../errors/AppError'
 import { FileAccessType } from '../types/file'
+import { decryptStorageKey } from '../utils/fileProtection'
 
 const getFileByToken = async (token: string) => {
   const fileRepository = useTypeORM(FileEntity)
@@ -49,7 +50,8 @@ const verifyFilePassword = async (token: string, password: string) => {
 
   if (!isValid) throw new AppError('Invalid password', 401)
 
-  return { fileUrl: `https://utfs.io/f/${file.storageKey}` }
+  const storageKey = decryptStorageKey(file.storageKey, password, file.salt)
+  return { fileUrl: `https://utfs.io/f/${storageKey}` }
 }
 
 const getFileDownloadUrl = async (token: string) => {
@@ -90,7 +92,7 @@ export const deleteExpiredFiles = async () => {
   }
 
   const utapi = new UTApi()
-  const storageKeys = expiredFiles.map((f) => f.storageKey)
+  const storageKeys = expiredFiles.map((f) => decryptStorageKey(f.masterEncryptedStorageKey, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!))
   await utapi.deleteFiles(storageKeys)
 
   const ids = expiredFiles.map((f) => f.id)
