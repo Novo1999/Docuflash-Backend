@@ -1,45 +1,37 @@
 import bcrypt from 'bcryptjs'
 import { DeepPartial } from 'typeorm'
 import { UTApi } from 'uploadthing/server'
+import { PREVIEWABLE_TYPES } from '../constants'
 import { useTypeORM } from '../data-source'
 import { FileEntity } from '../entity/file.entity'
 import { AppError } from '../errors/AppError'
-import { FileAccessType } from '../types/file'
+import { FileAccessType, FileType } from '../types/file'
+import { signAccessToken, verifyAccessToken } from '../utils/accessToken'
 import { decryptStorageKey } from '../utils/fileProtection'
 
 const getFileByToken = async (token: string) => {
   const fileRepository = useTypeORM(FileEntity)
-
   const fileByToken = await fileRepository.findOneBy({ shareToken: token })
-
   if (!fileByToken) throw new AppError('File not found', 404)
-
   return fileByToken
 }
 
 const deleteFileById = async (id: string) => {
   const fileRepository = useTypeORM(FileEntity)
-
   const result = await fileRepository.delete({ id })
-
   if (result.affected === 0) throw new AppError('File not found', 404)
 }
 
 const uploadFileService = async (payload: DeepPartial<FileEntity>) => {
   const fileRepository = useTypeORM(FileEntity)
-
   const file = fileRepository.create(payload)
-
-  const savedFile = await fileRepository.save(file)
-
-  return savedFile
+  return fileRepository.save(file)
 }
 
 const verifyFilePassword = async (token: string, password: string) => {
   const fileRepository = useTypeORM(FileEntity)
 
   const file = await fileRepository.findOneBy({ shareToken: token })
-
   if (!file) throw new AppError('File not found', 404)
 
   if (file.accessType !== FileAccessType.PROTECTED) {
@@ -47,44 +39,91 @@ const verifyFilePassword = async (token: string, password: string) => {
   }
 
   const isValid = await bcrypt.compare(password, file.password)
-
   if (!isValid) throw new AppError('Invalid password', 401)
 
-  const storageKey = decryptStorageKey(file.storageKey, password, file.salt)
-  return { fileUrl: `https://utfs.io/f/${storageKey}` }
+  // Decrypt storageKey with user password so token carries it for preview/download
+  const decryptedStorageKey = decryptStorageKey(file.storageKey, password, file.salt)
+  const accessToken = signAccessToken(token, decryptedStorageKey)
+
+  return { accessToken }
 }
 
-const getFileDownloadUrl = async (token: string) => {
+const getFilePreview = async (token: string, accessToken?: string) => {
   const fileRepository = useTypeORM(FileEntity)
 
   const file = await fileRepository.findOneBy({ shareToken: token })
-
   if (!file) throw new AppError('File not found', 404)
 
-  if (file.accessType === FileAccessType.PROTECTED) {
-    throw new AppError('Password required', 401)
+  if (!PREVIEWABLE_TYPES.has(file.fileType)) {
+    throw new AppError('Preview not supported for this file type', 400)
   }
 
-  return { fileUrl: `https://utfs.io/f/${file.storageKey}` }
+  let storageKey: string
+
+  if (file.accessType === FileAccessType.PROTECTED) {
+    if (!accessToken) throw new AppError('Access token required', 401)
+    const payload = verifyAccessToken(accessToken)
+    if (payload.shareToken !== token) throw new AppError('Token mismatch', 401)
+    storageKey = payload.storageKey
+  } else {
+    // Public: decrypt via master key
+    storageKey = decryptStorageKey(file.masterEncryptedStorageKey, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!)
+  }
+
+  const fileUrl = `https://utfs.io/f/${storageKey}`
+
+  switch (file.fileType) {
+    case FileType.PDF:
+      return { kind: 'pdf' as const, url: fileUrl }
+
+    case FileType.TXT: {
+      const response = await fetch(fileUrl)
+      if (!response.ok) throw new AppError('Failed to fetch file content', 502)
+      const text = await response.text()
+      return { kind: 'text' as const, text }
+    }
+
+    case FileType.DOCX:
+      return { kind: 'docx_url' as const, url: fileUrl }
+
+    default:
+      throw new AppError('Preview not supported for this file type', 400)
+  }
+}
+
+const getFileDownloadUrl = async (token: string, accessToken?: string) => {
+  const fileRepository = useTypeORM(FileEntity)
+
+  const file = await fileRepository.findOneBy({ shareToken: token })
+  if (!file) throw new AppError('File not found', 404)
+
+  let storageKey: string
+
+  if (file.accessType === FileAccessType.PROTECTED) {
+    if (!accessToken) throw new AppError('Access token required', 401)
+    const payload = verifyAccessToken(accessToken)
+    if (payload.shareToken !== token) throw new AppError('Token mismatch', 401)
+    storageKey = payload.storageKey
+  } else {
+    storageKey = decryptStorageKey(file.masterEncryptedStorageKey, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!)
+  }
+
+  // Increment downloadCount — only place this happens
+  await fileRepository.increment({ shareToken: token }, 'downloadCount', 1)
+
+  return { fileUrl: `https://utfs.io/f/${storageKey}` }
 }
 
 const deleteFileByShareToken = async (token: string) => {
   const fileRepository = useTypeORM(FileEntity)
-
   const result = await fileRepository.delete({ shareToken: token })
-
   if (result.affected === 0) throw new AppError('File not found', 404)
 }
 
 export const deleteExpiredFiles = async () => {
   const fileRepository = useTypeORM(FileEntity)
 
-  const expiredFiles = await fileRepository
-    .createQueryBuilder('file')
-    .where('file.expireAt <= :now', {
-      now: new Date(),
-    })
-    .getMany()
+  const expiredFiles = await fileRepository.createQueryBuilder('file').where('file.expireAt <= :now', { now: new Date() }).getMany()
 
   if (!expiredFiles.length) {
     console.warn('No expired files')
@@ -101,4 +140,4 @@ export const deleteExpiredFiles = async () => {
   return { deleted: expiredFiles.length }
 }
 
-export { deleteFileById, deleteFileByShareToken, getFileByToken, getFileDownloadUrl, uploadFileService, verifyFilePassword }
+export { deleteFileById, deleteFileByShareToken, getFileByToken, getFileDownloadUrl, getFilePreview, uploadFileService, verifyFilePassword }
