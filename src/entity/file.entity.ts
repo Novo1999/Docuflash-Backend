@@ -27,7 +27,7 @@ export class FileEntity {
   @Column()
   clientId!: string
 
-  @Column()
+  @Column({ nullable: true })
   salt!: string
 
   @Column({ nullable: true })
