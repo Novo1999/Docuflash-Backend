@@ -1,5 +1,6 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm'
+import { Column, CreateDateColumn, Entity, ManyToMany, OneToMany, PrimaryGeneratedColumn } from 'typeorm'
 import { DeviceInfo, FileAccessType, FileType } from '../types/file'
+import { FolderEntity } from './folder.entity'
 
 @Entity()
 export class FileEntity {
@@ -53,4 +54,7 @@ export class FileEntity {
 
   @CreateDateColumn()
   createdAt!: Date
+
+  @ManyToMany(() => FolderEntity, (folder) => folder.files)
+  folder?: FolderEntity[]
 }
