@@ -7,6 +7,7 @@ import { UTApi } from 'uploadthing/server'
 import { AppDataSource } from './data-source'
 import { errorHandler } from './middleware/errorHandler'
 import fileRouter from './routes/file.routes'
+import folderRouter from './routes/folder.routes'
 import { uploadThingRouter } from './routes/uploadthing.routes'
 
 dotenv.config()
@@ -45,6 +46,7 @@ app.use(async (req, res, next) => {
   }
 })
 app.use('/api/files', fileRouter)
+app.use('/api/folders', folderRouter)
 
 app.use(errorHandler)
 

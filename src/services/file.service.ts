@@ -108,7 +108,7 @@ const getFileDownloadUrl = async (token: string, accessToken?: string) => {
     storageKey = decryptStorageKey(file.masterEncryptedStorageKey, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!)
   }
 
-  // Increment downloadCount — only place this happens
+  // Increment downloadCount
   await fileRepository.increment({ shareToken: token }, 'downloadCount', 1)
 
   return { fileUrl: `https://utfs.io/f/${storageKey}` }
