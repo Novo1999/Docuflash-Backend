@@ -4,6 +4,7 @@ import { UTApi } from 'uploadthing/server'
 import { PREVIEWABLE_TYPES } from '../constants'
 import { useTypeORM } from '../data-source'
 import { FileEntity } from '../entity/file.entity'
+import { FolderEntity } from '../entity/folder.entity'
 import { AppError } from '../errors/AppError'
 import { FileAccessType, FileType } from '../types/file'
 import { signAccessToken, verifyAccessToken } from '../utils/accessToken'
@@ -18,10 +19,25 @@ const getFileByToken = async (token: string) => {
 
 const deleteFileById = async (id: string) => {
   const fileRepository = useTypeORM(FileEntity)
-  const result = await fileRepository.delete({ id })
-  if (result.affected === 0) throw new AppError('File not found', 404)
-}
+  const folderRepository = useTypeORM(FolderEntity)
 
+  const file = await fileRepository.findOneBy({ id })
+  if (!file) throw new AppError('File not found', 404)
+
+  const folder = await folderRepository.findOne({ where: { files: { id } }, relations: { files: true } })
+
+  if (folder) {
+    folder.files = folder.files.filter((f) => f.id !== id)
+    await folderRepository.save(folder)
+  }
+
+  const storageKey = decryptStorageKey(file.masterEncryptedStorageKey, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!)
+
+  const utapi = new UTApi()
+  await utapi.deleteFiles([storageKey])
+
+  await fileRepository.delete({ id })
+}
 const uploadFileService = async (payload: DeepPartial<FileEntity>) => {
   const fileRepository = useTypeORM(FileEntity)
   const file = fileRepository.create(payload)
@@ -116,8 +132,16 @@ const getFileDownloadUrl = async (token: string, accessToken?: string) => {
 
 const deleteFileByShareToken = async (token: string) => {
   const fileRepository = useTypeORM(FileEntity)
-  const result = await fileRepository.delete({ shareToken: token })
-  if (result.affected === 0) throw new AppError('File not found', 404)
+
+  const file = await fileRepository.findOneBy({ shareToken: token })
+  if (!file) throw new AppError('File not found', 404)
+
+  const storageKey = decryptStorageKey(file.masterEncryptedStorageKey, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!)
+
+  const utapi = new UTApi()
+  await utapi.deleteFiles([storageKey])
+
+  await fileRepository.delete({ shareToken: token })
 }
 
 export const deleteExpiredFiles = async () => {

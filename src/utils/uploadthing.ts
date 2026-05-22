@@ -1,7 +1,7 @@
 import { createUploadthing, type FileRouter } from 'uploadthing/express'
 
 const f = createUploadthing()
-const config = { maxFileSize: '16MB' as const }
+const config = { maxFileSize: '16MB' as const, maxFileCount: 5 }
 
 export const uploadRouter = {
   fileUploader: f({
@@ -9,7 +9,7 @@ export const uploadRouter = {
     'application/msword': config,
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document': config, // 👈 .docx
     'application/vnd.ms-excel': config,
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': config,       // 👈 .xlsx
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': config, // 👈 .xlsx
     'application/zip': config,
     text: config,
   }).onUploadComplete((data) => {

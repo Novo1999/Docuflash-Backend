@@ -67,7 +67,7 @@ const uploadFile = async (req: TypedBodyRequest<DeepPartial<FileEntity>>, res: R
       salt,
     })
 
-    const { password, storageKey, id, deviceInfo, clientId, downloadCount, ...rest } = fileResponse
+    const { password, storageKey, deviceInfo, clientId, downloadCount, ...rest } = fileResponse
     return createJsonResponse(res, { msg: 'File uploaded', data: rest, status: 200 })
   } catch (error) {
     next(error)

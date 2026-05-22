@@ -1,4 +1,4 @@
-import { Column, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn } from 'typeorm'
+import { Column, CreateDateColumn, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn } from 'typeorm'
 import { FileEntity } from './file.entity'
 
 @Entity()
@@ -9,7 +9,13 @@ export class FolderEntity {
   @Column()
   folderName!: string
 
-  @ManyToMany(() => FileEntity, (file) => file.folder)
+  @Column()
+  shareToken!: string
+
+  @ManyToMany(() => FileEntity, (file) => file.folder, {cascade: ['remove']})
   @JoinTable()
   files!: FileEntity[]
+
+  @CreateDateColumn()
+  createdAt!: Date
 }
