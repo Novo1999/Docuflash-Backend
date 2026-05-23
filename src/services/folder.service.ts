@@ -47,6 +47,21 @@ const getFolderByIdService = async (id: string) => {
   return folder
 }
 
+const deleteFolder = async (folder: FolderEntity) => {
+  const fileRepository = useTypeORM(FileEntity)
+  const folderRepository = useTypeORM(FolderEntity)
+
+  if (folder.files && folder.files.length > 0) {
+    const storageKeys = folder.files.map((f) => decryptStorageKey(f.masterEncryptedStorageKey, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!))
+
+    const utapi = new UTApi()
+    await utapi.deleteFiles(storageKeys)
+    await fileRepository.remove(folder.files)
+  }
+
+  await folderRepository.remove(folder)
+}
+
 const deleteFolderByTokenService = async (token: string) => {
   const folderRepository = useTypeORM(FolderEntity)
 
@@ -57,11 +72,10 @@ const deleteFolderByTokenService = async (token: string) => {
 
   if (!folder) throw new AppError('Folder not found', 404)
 
-  await folderRepository.remove(folder)
+  await deleteFolder(folder)
 }
 
 const deleteFolderByIdService = async (id: string) => {
-  const fileRepository = useTypeORM(FileEntity)
   const folderRepository = useTypeORM(FolderEntity)
 
   const folder = await folderRepository.findOne({
@@ -71,16 +85,6 @@ const deleteFolderByIdService = async (id: string) => {
 
   if (!folder) throw new AppError('Folder not found', 404)
 
-  if (folder.files.length > 0) {
-    console.log("🚀 ~ deleteFolderByIdService ~ files:", folder.files)
-    const storageKeys = folder.files.map((f) => decryptStorageKey(f.masterEncryptedStorageKey, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!))
-    console.log("🚀 ~ deleteFolderByIdService ~ storageKeys:", storageKeys)
-
-    const utapi = new UTApi()
-    await utapi.deleteFiles(storageKeys)
-    await fileRepository.delete(folder.files.map((f) => f.id))
-  }
-
-  await folderRepository.remove(folder)
+  await deleteFolder(folder)
 }
 export { createFolderService, deleteFolderByIdService, deleteFolderByTokenService, getFolderByIdService, getFolderByTokenService }

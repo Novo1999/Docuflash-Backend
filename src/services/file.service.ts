@@ -24,19 +24,12 @@ const deleteFileById = async (id: string) => {
   const file = await fileRepository.findOneBy({ id })
   if (!file) throw new AppError('File not found', 404)
 
-  const folder = await folderRepository.findOne({ where: { files: { id } }, relations: { files: true } })
-
-  if (folder) {
-    folder.files = folder.files.filter((f) => f.id !== id)
-    await folderRepository.save(folder)
-  }
-
   const storageKey = decryptStorageKey(file.masterEncryptedStorageKey, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!)
 
   const utapi = new UTApi()
   await utapi.deleteFiles([storageKey])
 
-  await fileRepository.delete({ id })
+  await fileRepository.remove(file)
 }
 const uploadFileService = async (payload: DeepPartial<FileEntity>) => {
   const fileRepository = useTypeORM(FileEntity)
@@ -141,13 +134,14 @@ const deleteFileByShareToken = async (token: string) => {
   const utapi = new UTApi()
   await utapi.deleteFiles([storageKey])
 
-  await fileRepository.delete({ shareToken: token })
+  await fileRepository.remove(file)
 }
 
 export const deleteExpiredFiles = async () => {
   const fileRepository = useTypeORM(FileEntity)
 
   const expiredFiles = await fileRepository.createQueryBuilder('file').where('file.expireAt <= :now', { now: new Date() }).getMany()
+  console.log("🚀 ~ deleteExpiredFiles ~ expiredFiles:", expiredFiles)
 
   if (!expiredFiles.length) {
     console.warn('No expired files')
@@ -156,10 +150,10 @@ export const deleteExpiredFiles = async () => {
 
   const utapi = new UTApi()
   const storageKeys = expiredFiles.map((f) => decryptStorageKey(f.masterEncryptedStorageKey, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!))
+  console.log("🚀 ~ deleteExpiredFiles ~ storageKeys:", storageKeys)
   await utapi.deleteFiles(storageKeys)
 
-  const ids = expiredFiles.map((f) => f.id)
-  await fileRepository.delete(ids)
+  await fileRepository.remove(expiredFiles)
 
   return { deleted: expiredFiles.length }
 }
