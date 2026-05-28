@@ -12,10 +12,13 @@ export class FolderEntity {
   @Column()
   shareToken!: string
 
-  @ManyToMany(() => FileEntity, (file) => file.folder, {cascade: ['remove']})
+  @ManyToMany(() => FileEntity, (file) => file.folder, { cascade: ['remove'] })
   @JoinTable()
   files!: FileEntity[]
 
   @CreateDateColumn()
   createdAt!: Date
+
+  @Column('timestamp without time zone', { nullable: true })
+  expireAt!: Date
 }

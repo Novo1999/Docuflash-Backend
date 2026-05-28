@@ -141,7 +141,6 @@ export const deleteExpiredFiles = async () => {
   const fileRepository = useTypeORM(FileEntity)
 
   const expiredFiles = await fileRepository.createQueryBuilder('file').where('file.expireAt <= :now', { now: new Date() }).getMany()
-  console.log("🚀 ~ deleteExpiredFiles ~ expiredFiles:", expiredFiles)
 
   if (!expiredFiles.length) {
     console.warn('No expired files')
@@ -150,7 +149,6 @@ export const deleteExpiredFiles = async () => {
 
   const utapi = new UTApi()
   const storageKeys = expiredFiles.map((f) => decryptStorageKey(f.masterEncryptedStorageKey, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!))
-  console.log("🚀 ~ deleteExpiredFiles ~ storageKeys:", storageKeys)
   await utapi.deleteFiles(storageKeys)
 
   await fileRepository.remove(expiredFiles)
@@ -159,3 +157,4 @@ export const deleteExpiredFiles = async () => {
 }
 
 export { deleteFileById, deleteFileByShareToken, getFileByToken, getFileDownloadUrl, getFilePreview, uploadFileService, verifyFilePassword }
+

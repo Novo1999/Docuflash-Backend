@@ -16,6 +16,7 @@ const createFolderService = async (payload: FolderPayload) => {
     folderName: payload.folderName,
     shareToken: payload.shareToken,
     files,
+    expireAt: payload.expireAt
   })
 
   return folderRepository.save(folder)
@@ -88,3 +89,4 @@ const deleteFolderByIdService = async (id: string) => {
   await deleteFolder(folder)
 }
 export { createFolderService, deleteFolderByIdService, deleteFolderByTokenService, getFolderByIdService, getFolderByTokenService }
+
