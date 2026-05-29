@@ -1,7 +1,8 @@
 import crypto from 'crypto'
 import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
-import { createFolderService, deleteFolderByIdService, deleteFolderByTokenService, getFolderByIdService, getFolderByTokenService } from '../services/folder.service'
+import { AppError } from '../errors/AppError'
+import { createFolderService, deleteFolderByIdService, deleteFolderByTokenService, getFolderByIdService, getFolderByTokenService, unlockFolderService } from '../services/folder.service'
 import { TypedBodyRequest } from '../types/common'
 import { FolderPayload } from '../types/folder'
 import createJsonResponse from '../utils/createJsonResponse'
@@ -66,4 +67,23 @@ const deleteFolderById = async (req: Request<{ id: string }>, res: Response, nex
   }
 }
 
-export { createFolder, deleteFolderById, deleteFolderByShareToken, getFolderById, getFolderByShareToken }
+const unlockFolder = async (req: Request<{ password: string, token: string }>, res: Response, next: NextFunction) => {
+  try {
+    const { token } = req.params
+    const { password } = req.body
+
+    if (!password) {
+      throw new AppError('Password is required', StatusCodes.BAD_REQUEST)
+    }
+
+    const folder = await unlockFolderService(token, password)
+
+    const { password: folderPassword, ...rest } = folder
+    return createJsonResponse(res, { msg: 'Folder unlocked', data: rest, status: 200 })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export { createFolder, deleteFolderById, deleteFolderByShareToken, getFolderById, getFolderByShareToken, unlockFolder }
+

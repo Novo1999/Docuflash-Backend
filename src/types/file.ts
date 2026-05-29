@@ -6,11 +6,6 @@ export enum FileType {
   DOCX = 'docx',
 }
 
-export enum FileAccessType {
-  PROTECTED = 'protected',
-  PUBLIC = 'public',
-}
-
 export type DeviceInfo = {
   deviceType: 'mobile' | 'desktop'
   browser: string

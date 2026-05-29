@@ -1,14 +1,15 @@
 import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 import { DeepPartial } from 'typeorm'
 import { UTApi } from 'uploadthing/server'
 import { PREVIEWABLE_TYPES } from '../constants'
 import { useTypeORM } from '../data-source'
 import { FileEntity } from '../entity/file.entity'
-import { FolderEntity } from '../entity/folder.entity'
 import { AppError } from '../errors/AppError'
-import { FileAccessType, FileType } from '../types/file'
+import { AccessType } from '../types/common'
+import { FileType } from '../types/file'
 import { signAccessToken, verifyAccessToken } from '../utils/accessToken'
-import { decryptStorageKey } from '../utils/fileProtection'
+import { decryptStorageKey, encryptStorageKey } from '../utils/fileProtection'
 
 const getFileByToken = async (token: string) => {
   const fileRepository = useTypeORM(FileEntity)
@@ -19,7 +20,6 @@ const getFileByToken = async (token: string) => {
 
 const deleteFileById = async (id: string) => {
   const fileRepository = useTypeORM(FileEntity)
-  const folderRepository = useTypeORM(FolderEntity)
 
   const file = await fileRepository.findOneBy({ id })
   if (!file) throw new AppError('File not found', 404)
@@ -32,18 +32,40 @@ const deleteFileById = async (id: string) => {
   await fileRepository.remove(file)
 }
 const uploadFileService = async (payload: DeepPartial<FileEntity>) => {
+  const shareToken = crypto.randomBytes(16).toString('hex')
+
+  let hashedPassword: string | undefined
+  let encryptedStorageKey: string | undefined
+  let salt: string | undefined
+
+  if (payload.accessType === 'protected' && payload.password) {
+    salt = bcrypt.genSaltSync(10)
+    hashedPassword = bcrypt.hashSync(payload.password, salt)
+    encryptedStorageKey = encryptStorageKey(payload.storageKey!, payload.password, salt)
+  }
+
+  const masterEncryptedStorageKey = encryptStorageKey(payload.storageKey!, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!)
+
   const fileRepository = useTypeORM(FileEntity)
-  const file = fileRepository.create(payload)
+  const file = fileRepository.create({
+    ...payload,
+    downloadCount: payload.downloadCount ?? 0,
+    password: hashedPassword,
+    shareToken,
+    storageKey: encryptedStorageKey ?? payload.storageKey,
+    masterEncryptedStorageKey,
+    salt,
+  })
+
   return fileRepository.save(file)
 }
-
 const verifyFilePassword = async (token: string, password: string) => {
   const fileRepository = useTypeORM(FileEntity)
 
   const file = await fileRepository.findOneBy({ shareToken: token })
   if (!file) throw new AppError('File not found', 404)
 
-  if (file.accessType !== FileAccessType.PROTECTED) {
+  if (file.accessType !== AccessType.PROTECTED) {
     throw new AppError('This file is not password protected', 400)
   }
 
@@ -69,7 +91,7 @@ const getFilePreview = async (token: string, accessToken?: string) => {
 
   let storageKey: string
 
-  if (file.accessType === FileAccessType.PROTECTED) {
+  if (file.accessType === AccessType.PROTECTED) {
     if (!accessToken) throw new AppError('Access token required', 401)
     const payload = verifyAccessToken(accessToken)
     if (payload.shareToken !== token) throw new AppError('Token mismatch', 401)
@@ -108,7 +130,7 @@ const getFileDownloadUrl = async (token: string, accessToken?: string) => {
 
   let storageKey: string
 
-  if (file.accessType === FileAccessType.PROTECTED) {
+  if (file.accessType === AccessType.PROTECTED) {
     if (!accessToken) throw new AppError('Access token required', 401)
     const payload = verifyAccessToken(accessToken)
     if (payload.shareToken !== token) throw new AppError('Token mismatch', 401)

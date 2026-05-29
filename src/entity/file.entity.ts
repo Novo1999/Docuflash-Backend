@@ -1,5 +1,6 @@
-import { Column, CreateDateColumn, Entity, ManyToMany, OneToMany, PrimaryGeneratedColumn } from 'typeorm'
-import { DeviceInfo, FileAccessType, FileType } from '../types/file'
+import { Column, CreateDateColumn, Entity, ManyToMany, PrimaryGeneratedColumn } from 'typeorm'
+import { AccessType } from '../types/common'
+import { DeviceInfo, FileType } from '../types/file'
 import { FolderEntity } from './folder.entity'
 
 @Entity()
@@ -36,9 +37,9 @@ export class FileEntity {
 
   @Column({
     type: 'enum',
-    enum: FileAccessType,
+    enum: AccessType,
   })
-  accessType!: FileAccessType
+  accessType!: AccessType
 
   @Column()
   downloadCount!: number

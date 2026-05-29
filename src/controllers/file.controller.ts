@@ -1,5 +1,3 @@
-import bcrypt from 'bcryptjs'
-import crypto from 'crypto'
 import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { DeepPartial } from 'typeorm'
@@ -9,7 +7,7 @@ import { AppError } from '../errors/AppError'
 import { deleteExpiredFiles, deleteFileById, deleteFileByShareToken, getFileByToken, getFileDownloadUrl, getFilePreview, uploadFileService, verifyFilePassword } from '../services/file.service'
 import { TypedBodyRequest } from '../types/common'
 import createJsonResponse from '../utils/createJsonResponse'
-import { decryptStorageKey, encryptStorageKey } from '../utils/fileProtection'
+import { decryptStorageKey } from '../utils/fileProtection'
 
 const getFileByShareToken = async (req: Request<{ token: string }>, res: Response, next: NextFunction) => {
   try {
@@ -38,34 +36,13 @@ const deleteFile = async (req: Request<{ id: string }>, res: Response, next: Nex
 
 const uploadFile = async (req: TypedBodyRequest<DeepPartial<FileEntity>>, res: Response, next: NextFunction) => {
   try {
-    const shareToken = crypto.randomBytes(16).toString('hex')
     const body = req.body
 
     if (body.accessType === 'protected' && !body.password) {
       throw new AppError('You must set a password', StatusCodes.BAD_REQUEST)
     }
 
-    let hashedPassword: string | undefined
-    let encryptedStorageKey: string | undefined
-    let salt: string | undefined
-
-    if (body.accessType === 'protected' && body.password) {
-      salt = bcrypt.genSaltSync(10)
-      hashedPassword = bcrypt.hashSync(body.password, salt)
-      encryptedStorageKey = encryptStorageKey(body.storageKey!, body.password, salt)
-    }
-
-    const masterEncryptedStorageKey = encryptStorageKey(body.storageKey!, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!)
-
-    const fileResponse = await uploadFileService({
-      ...body,
-      downloadCount: body.downloadCount ?? 0,
-      password: hashedPassword,
-      shareToken,
-      storageKey: encryptedStorageKey ?? body.storageKey,
-      masterEncryptedStorageKey,
-      salt,
-    })
+    const fileResponse = await uploadFileService(body)
 
     const { password, storageKey, deviceInfo, clientId, downloadCount, ...rest } = fileResponse
     return createJsonResponse(res, { msg: 'File uploaded', data: rest, status: 200 })
