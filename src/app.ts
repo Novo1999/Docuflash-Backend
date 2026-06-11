@@ -6,6 +6,7 @@ import morgan from 'morgan'
 import { UTApi } from 'uploadthing/server'
 import { AppDataSource } from './data-source'
 import { errorHandler } from './middleware/errorHandler'
+import authRouter from './routes/auth.routes'
 import fileRouter from './routes/file.routes'
 import folderRouter from './routes/folder.routes'
 import { uploadThingRouter } from './routes/uploadthing.routes'
@@ -45,6 +46,7 @@ app.use(async (req, res, next) => {
     next(err)
   }
 })
+app.use('/api/auth', authRouter)
 app.use('/api/files', fileRouter)
 app.use('/api/folders', folderRouter)
 
