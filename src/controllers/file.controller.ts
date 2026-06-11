@@ -42,7 +42,7 @@ const uploadFile = async (req: TypedBodyRequest<DeepPartial<FileEntity>>, res: R
       throw new AppError('You must set a password', StatusCodes.BAD_REQUEST)
     }
 
-    const fileResponse = await uploadFileService(body)
+    const fileResponse = await uploadFileService({ ...body, ownerId: req.user?.id ?? null })
 
     const { password, storageKey, deviceInfo, clientId, downloadCount, ...rest } = fileResponse
     return createJsonResponse(res, { msg: 'File uploaded', data: rest, status: 200 })
