@@ -122,8 +122,8 @@ SUPABASE_URL=https://<ref>.supabase.co
 SUPABASE_ANON_KEY=<anon public key>
 SUPABASE_SERVICE_ROLE_KEY=<service role key>   # used for logout / admin ops
 SUPABASE_JWT_SECRET=<JWT secret>               # Settings > API > JWT Settings
-FRONTEND_URL=http://localhost:5173             # where OAuth lands after callback
-BASE_URL=http://localhost:3000                 # this API's public base URL
+FRONTEND_URL=http://localhost:3000             # where OAuth lands after callback (Next.js dev default)
+BASE_URL=http://localhost:8000                 # this API's public base URL
 ```
 
 In the Supabase dashboard:

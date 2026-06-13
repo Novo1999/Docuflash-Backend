@@ -9,8 +9,8 @@ import createJsonResponse from '../utils/createJsonResponse'
 const OAUTH_STATE_COOKIE = 'df_oauth_state'
 const OAUTH_PROVIDERS: OAuthProvider[] = ['google', 'github']
 
-const getFrontendUrl = () => process.env.BASE_URL || 'http://localhost:3000'
-const getBackendUrl = () => `http://localhost:${process.env.PORT || 3000}`
+const getFrontendUrl = () => process.env.FRONTEND_URL || 'http://localhost:3000'
+const getBackendUrl = () => process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`
 
 const register = async (req: TypedBodyRequest<RegisterPayload>, res: Response, next: NextFunction) => {
   try {
