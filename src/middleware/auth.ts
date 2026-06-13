@@ -12,23 +12,23 @@ const extractToken = (req: Request): string | null => {
   return null
 }
 
-const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = extractToken(req)
     if (!token) throw new AppError('Authentication required', 401)
 
-    req.user = verifySupabaseToken(token)
+    req.user = await verifySupabaseToken(token)
     next()
   } catch (error) {
     next(error)
   }
 }
 
-const optionalAuth = (req: Request, res: Response, next: NextFunction) => {
+const optionalAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = extractToken(req)
     if (token) {
-      req.user = verifySupabaseToken(token)
+      req.user = await verifySupabaseToken(token)
     }
     next()
   } catch {
