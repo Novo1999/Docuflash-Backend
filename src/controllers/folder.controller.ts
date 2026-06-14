@@ -2,7 +2,7 @@ import crypto from 'crypto'
 import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { AppError } from '../errors/AppError'
-import { createFolderService, deleteFolderByIdService, deleteFolderByTokenService, getFolderByIdService, getFolderByTokenService, unlockFolderService } from '../services/folder.service'
+import { createFolderService, deleteFolderByIdService, deleteFolderByTokenService, getFolderByIdService, getFolderByTokenService, getFoldersByOwner, unlockFolderService } from '../services/folder.service'
 import { TypedBodyRequest } from '../types/common'
 import { FolderPayload } from '../types/folder'
 import createJsonResponse from '../utils/createJsonResponse'
@@ -85,5 +85,24 @@ const unlockFolder = async (req: Request<{ password: string, token: string }>, r
   }
 }
 
-export { createFolder, deleteFolderById, deleteFolderByShareToken, getFolderById, getFolderByShareToken, unlockFolder }
+const getMyFolders = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      throw new AppError('Authentication required', StatusCodes.UNAUTHORIZED)
+    }
+
+    const folders = await getFoldersByOwner(req.user.id)
+
+    const safeFolders = folders.map((folder) => {
+      const { password, ...rest } = folder
+      return rest
+    })
+
+    return createJsonResponse(res, { msg: 'Folders fetched', data: safeFolders, status: StatusCodes.OK })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export { createFolder, deleteFolderById, deleteFolderByShareToken, getFolderById, getFolderByShareToken, getMyFolders, unlockFolder }
 

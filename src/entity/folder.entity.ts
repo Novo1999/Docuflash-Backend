@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn } from 'typeorm'
+import { Column, CreateDateColumn, Entity, Index, JoinTable, ManyToMany, PrimaryGeneratedColumn } from 'typeorm'
 import { AccessType } from '../types/common'
 import { FileEntity } from './file.entity'
 
@@ -33,6 +33,7 @@ export class FolderEntity {
   @Column({ nullable: true })
   clientId!: string
 
+  @Index()
   @Column('uuid', { nullable: true })
   ownerId!: string | null
 

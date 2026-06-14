@@ -178,5 +178,9 @@ export const deleteExpiredFiles = async () => {
   return { deleted: expiredFiles.length }
 }
 
-export { deleteFileById, deleteFileByShareToken, getFileByToken, getFileDownloadUrl, getFilePreview, uploadFileService, verifyFilePassword }
+const getFilesByOwner = async (ownerId: string) => {
+  return useTypeORM(FileEntity).find({ where: { ownerId }, order: { createdAt: 'DESC' } })
+}
+
+export { deleteFileById, deleteFileByShareToken, getFileByToken, getFileDownloadUrl, getFilePreview, getFilesByOwner, uploadFileService, verifyFilePassword }
 

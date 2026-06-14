@@ -89,6 +89,10 @@ const getFolderByIdService = async (id: string) => {
   return folder
 }
 
+const getFoldersByOwner = async (ownerId: string) => {
+  return useTypeORM(FolderEntity).find({ where: { ownerId }, order: { createdAt: 'DESC' } })
+}
+
 const deleteFolder = async (folder: FolderEntity) => {
   const fileRepository = useTypeORM(FileEntity)
   const folderRepository = useTypeORM(FolderEntity)
@@ -129,5 +133,5 @@ const deleteFolderByIdService = async (id: string) => {
 
   await deleteFolder(folder)
 }
-export { createFolderService, deleteFolderByIdService, deleteFolderByTokenService, getFolderByIdService, getFolderByTokenService, unlockFolderService }
+export { createFolderService, deleteFolderByIdService, deleteFolderByTokenService, getFolderByIdService, getFolderByTokenService, getFoldersByOwner, unlockFolderService }
 
