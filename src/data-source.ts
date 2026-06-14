@@ -3,6 +3,7 @@ import 'reflect-metadata'
 import { DataSource, EntityTarget, ObjectLiteral, Repository } from 'typeorm'
 import { FileEntity } from './entity/file.entity'
 import { FolderEntity } from './entity/folder.entity'
+import { UserEntity } from './entity/user.entity'
 
 dotenv.config()
 
@@ -15,7 +16,7 @@ export const AppDataSource = new DataSource({
   database: process.env.PGSQL_DATABASE || 'postgres',
   synchronize: process.env.NODE_ENV === 'development',
   logging: process.env.NODE_ENV === 'development',
-  entities: [FileEntity, FolderEntity],
+  entities: [FileEntity, FolderEntity, UserEntity],
   migrations: [],
   subscribers: [],
 })

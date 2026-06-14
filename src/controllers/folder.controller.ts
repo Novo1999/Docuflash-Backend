@@ -10,7 +10,7 @@ import createJsonResponse from '../utils/createJsonResponse'
 const createFolder = async (req: TypedBodyRequest<FolderPayload>, res: Response, next: NextFunction) => {
   try {
     const shareToken = crypto.randomBytes(16).toString('hex')
-    const folderResponse = await createFolderService({ ...req.body, shareToken })
+    const folderResponse = await createFolderService({ ...req.body, shareToken, ownerId: req.user?.id ?? null })
 
     return createJsonResponse(res, { msg: 'Folder uploaded', data: folderResponse, status: StatusCodes.OK })
   } catch (error) {

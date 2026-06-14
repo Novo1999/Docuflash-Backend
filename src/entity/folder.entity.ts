@@ -33,6 +33,9 @@ export class FolderEntity {
   @Column({ nullable: true })
   clientId!: string
 
+  @Column('uuid', { nullable: true })
+  ownerId!: string | null
+
   @Column('timestamp without time zone', { nullable: true })
   expireAt!: Date
 }

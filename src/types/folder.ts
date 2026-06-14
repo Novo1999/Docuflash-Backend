@@ -8,4 +8,5 @@ export type FolderPayload = {
   password: string
   accessType: AccessType
   clientId: string
+  ownerId?: string | null
 }

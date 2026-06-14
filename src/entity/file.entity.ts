@@ -29,6 +29,9 @@ export class FileEntity {
   @Column()
   clientId!: string
 
+  @Column('uuid', { nullable: true })
+  ownerId!: string | null
+
   @Column({ nullable: true })
   salt!: string
 

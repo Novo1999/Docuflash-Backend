@@ -28,6 +28,7 @@ const createFolderService = async (payload: FolderPayload) => {
     expireAt: payload.expireAt,
     accessType: payload.accessType,
     clientId: payload.clientId,
+    ownerId: payload.ownerId ?? null,
     password: hashedPassword,
   })
 
