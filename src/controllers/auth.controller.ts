@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { AppError } from '../errors/AppError'
-import { getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, logoutUser, refreshSession, registerUser } from '../services/auth.service'
-import { LoginPayload, OAuthProvider, RefreshPayload, RegisterPayload } from '../types/auth'
+import { getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, logoutUser, refreshSession, registerUser, updateProfile } from '../services/auth.service'
+import { LoginPayload, OAuthProvider, RefreshPayload, RegisterPayload, UpdateProfilePayload } from '../types/auth'
 import { TypedBodyRequest } from '../types/common'
 import createJsonResponse from '../utils/createJsonResponse'
 
@@ -72,6 +72,22 @@ const me = async (req: Request, res: Response, next: NextFunction) => {
   }
 }
 
+const updateMe = async (req: TypedBodyRequest<UpdateProfilePayload>, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new AppError('Authentication required', StatusCodes.UNAUTHORIZED)
+
+    const { avatarUrl, displayName } = req.body
+    if (avatarUrl === undefined && displayName === undefined) {
+      throw new AppError('Nothing to update', StatusCodes.BAD_REQUEST)
+    }
+
+    const user = await updateProfile(req.user.id, { avatarUrl, displayName })
+    return createJsonResponse(res, { msg: 'Profile updated', data: user, status: StatusCodes.OK })
+  } catch (error) {
+    next(error)
+  }
+}
+
 const oauthRedirect = async (req: Request<{ provider: string }>, res: Response, next: NextFunction) => {
   try {
     const provider = req.params.provider as OAuthProvider
@@ -126,4 +142,4 @@ const oauthCallback = async (req: Request, res: Response, next: NextFunction) =>
   }
 }
 
-export { login, logout, me, oauthCallback, oauthRedirect, refresh, register }
+export { login, logout, me, oauthCallback, oauthRedirect, refresh, register, updateMe }
