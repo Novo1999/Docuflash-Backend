@@ -2,7 +2,7 @@ import { Session, User } from '@supabase/supabase-js'
 import { useTypeORM } from '../data-source'
 import { UserEntity } from '../entity/user.entity'
 import { AppError } from '../errors/AppError'
-import { LoginPayload, OAuthProvider, RegisterPayload } from '../types/auth'
+import { LoginPayload, OAuthProvider, RegisterPayload, UpdateProfilePayload } from '../types/auth'
 import { getSupabaseAdminClient, getSupabaseAuthClient, getSupabaseOAuthClient, MemoryStorage } from '../utils/supabase'
 
 const mapSession = (session: Session) => ({
@@ -117,4 +117,15 @@ const getCurrentUser = async (userId: string) => {
   return user
 }
 
-export { getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, logoutUser, refreshSession, registerUser }
+const updateProfile = async (userId: string, updates: UpdateProfilePayload) => {
+  const userRepository = useTypeORM(UserEntity)
+  const user = await userRepository.findOneBy({ id: userId })
+  if (!user) throw new AppError('User not found', 404)
+
+  if (updates.avatarUrl !== undefined) user.avatarUrl = updates.avatarUrl
+  if (updates.displayName !== undefined) user.displayName = updates.displayName
+
+  return userRepository.save(user)
+}
+
+export { getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, logoutUser, refreshSession, registerUser, updateProfile }

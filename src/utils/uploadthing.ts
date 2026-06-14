@@ -2,6 +2,7 @@ import { createUploadthing, type FileRouter } from 'uploadthing/express'
 
 const f = createUploadthing()
 const config = { maxFileSize: '16MB' as const, maxFileCount: 5 }
+const avatarConfig = { maxFileSize: '1MB' as const, maxFileCount: 1 }
 
 export const uploadRouter = {
   fileUploader: f({
@@ -14,6 +15,9 @@ export const uploadRouter = {
     text: config,
   }).onUploadComplete((data) => {
     console.log('upload completed', data)
+  }),
+  avatarUploader: f({ image: avatarConfig }).onUploadComplete((data) => {
+    console.log('avatar upload completed', data)
   }),
 } satisfies FileRouter
 

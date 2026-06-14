@@ -76,6 +76,24 @@ Requires `Authorization: Bearer <accessToken>`. Revokes the session server-side.
 Requires `Authorization: Bearer <accessToken>`. Returns the local user profile.
 `data`: `{ "id", "email", "displayName", "avatarUrl", "provider", "createdAt", "updatedAt" }`
 
+### `PATCH /me`
+
+Requires `Authorization: Bearer <accessToken>`. Updates the current user's profile. Send either or both fields:
+```json
+{ "avatarUrl": "https://utfs.io/f/...", "displayName": "New Name" }
+```
+`data`: the updated user object (same shape as `GET /me`).
+
+## Profile picture upload
+
+Avatars use the same UploadThing flow as files. There is a dedicated image endpoint `avatarUploader` (image only, max 1MB, 1 file) on the UploadThing route (`/api/uploadthing`).
+
+Flow:
+1. Upload the image to UploadThing via the `avatarUploader` endpoint — you get back a public file URL.
+2. Persist it on the user with `PATCH /api/auth/me` `{ "avatarUrl": "<url from step 1>" }`.
+
+The stored `avatarUrl` is then returned by `GET /me` and can be rendered directly.
+
 ### `GET /oauth/:provider`
 
 `:provider` is `google` or `github`. This is a **browser navigation** endpoint, not an XHR call. Point the browser at it (e.g. `window.location.href = "<API>/api/auth/oauth/google"` or an anchor link). The backend redirects to the provider, then handles the callback and finally redirects the browser to:

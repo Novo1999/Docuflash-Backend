@@ -20,3 +20,8 @@ export type RefreshPayload = {
 }
 
 export type OAuthProvider = 'google' | 'github'
+
+export type UpdateProfilePayload = {
+  avatarUrl?: string
+  displayName?: string
+}
