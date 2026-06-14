@@ -4,7 +4,7 @@ import { DeepPartial } from 'typeorm'
 import { UTApi } from 'uploadthing/server'
 import { FileEntity } from '../entity/file.entity'
 import { AppError } from '../errors/AppError'
-import { deleteExpiredFiles, deleteFileById, deleteFileByShareToken, getFileByToken, getFileDownloadUrl, getFilePreview, uploadFileService, verifyFilePassword } from '../services/file.service'
+import { deleteExpiredFiles, deleteFileById, deleteFileByShareToken, getFileByToken, getFileDownloadUrl, getFilePreview, getFilesByOwner, uploadFileService, verifyFilePassword } from '../services/file.service'
 import { TypedBodyRequest } from '../types/common'
 import createJsonResponse from '../utils/createJsonResponse'
 import { decryptStorageKey } from '../utils/fileProtection'
@@ -19,6 +19,23 @@ const getFileByShareToken = async (req: Request<{ token: string }>, res: Respons
       data: { ...rest, uploadDate: rest.createdAt },
       status: 200,
     })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const getMyFiles = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new AppError('Authentication required', StatusCodes.UNAUTHORIZED)
+
+    const files = await getFilesByOwner(req.user.id)
+
+    const data = files.map((file) => {
+      const { password, storageKey, masterEncryptedStorageKey, deviceInfo, clientId, salt, ...rest } = file
+      return rest
+    })
+
+    return createJsonResponse(res, { msg: 'Files fetched', data, status: StatusCodes.OK })
   } catch (error) {
     next(error)
   }
@@ -125,5 +142,5 @@ const cleanupExpiredFiles = async (req: Request, res: Response, next: NextFuncti
   }
 }
 
-export { cleanupExpiredFiles, deleteFile, deleteFileByShareTokenController as deleteFileByShareToken, downloadFile, getFileByShareToken, previewFile, uploadFile, verifyPassword }
+export { cleanupExpiredFiles, deleteFile, deleteFileByShareTokenController as deleteFileByShareToken, downloadFile, getFileByShareToken, getMyFiles, previewFile, uploadFile, verifyPassword }
 

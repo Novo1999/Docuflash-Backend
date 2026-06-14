@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, ManyToMany, PrimaryGeneratedColumn } from 'typeorm'
+import { Column, CreateDateColumn, Entity, Index, ManyToMany, PrimaryGeneratedColumn } from 'typeorm'
 import { AccessType } from '../types/common'
 import { DeviceInfo, FileType } from '../types/file'
 import { FolderEntity } from './folder.entity'
@@ -29,6 +29,7 @@ export class FileEntity {
   @Column()
   clientId!: string
 
+  @Index()
   @Column('uuid', { nullable: true })
   ownerId!: string | null
 

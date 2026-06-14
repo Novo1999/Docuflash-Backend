@@ -84,6 +84,22 @@ Requires `Authorization: Bearer <accessToken>`. Updates the current user's profi
 ```
 `data`: the updated user object (same shape as `GET /me`).
 
+## User content
+
+These endpoints live under the file/folder base paths (not `/api/auth`) but require authentication.
+
+### `GET /api/files/mine`
+
+Requires `Authorization: Bearer <accessToken>`. Returns the authenticated user's files.
+`data`: an array of file objects with sensitive fields stripped (`password`, `storageKey`, `masterEncryptedStorageKey`, `deviceInfo`, `clientId`, `salt`).
+
+### `GET /api/folders/mine`
+
+Requires `Authorization: Bearer <accessToken>`. Returns the authenticated user's folders.
+`data`: an array of folder objects with `password` stripped.
+
+> Only uploads/folders created while authenticated (a bearer token sent on `POST /api/files` and `POST /api/folders`) receive an `ownerId` and therefore appear in these lists.
+
 ## Profile picture upload
 
 Avatars use the same UploadThing flow as files. There is a dedicated image endpoint `avatarUploader` (image only, max 1MB, 1 file) on the UploadThing route (`/api/uploadthing`).

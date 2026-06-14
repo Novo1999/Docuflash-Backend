@@ -1,10 +1,11 @@
 import { Router } from 'express'
-import { cleanupExpiredFiles, deleteFile, deleteFileByShareToken, downloadFile, getFileByShareToken, previewFile, uploadFile, verifyPassword } from '../controllers/file.controller'
-import { optionalAuth } from '../middleware/auth'
+import { cleanupExpiredFiles, deleteFile, deleteFileByShareToken, downloadFile, getFileByShareToken, getMyFiles, previewFile, uploadFile, verifyPassword } from '../controllers/file.controller'
+import { optionalAuth, requireAuth } from '../middleware/auth'
 
 const router = Router()
 
 router.post('/', optionalAuth, uploadFile)
+router.get('/mine', requireAuth, getMyFiles)
 router.get('/:token', getFileByShareToken)
 router.delete('/:id', deleteFile)
 router.delete('/token/:token', deleteFileByShareToken)
