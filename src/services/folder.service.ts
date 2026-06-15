@@ -1,5 +1,4 @@
 import bcrypt from 'bcryptjs'
-import { UTApi } from 'uploadthing/server'
 import { useTypeORM } from '../data-source'
 import { FileEntity } from '../entity/file.entity'
 import { FolderEntity } from '../entity/folder.entity'
@@ -7,6 +6,7 @@ import { AppError } from '../errors/AppError'
 import { AccessType } from '../types/common'
 import { FolderPayload } from '../types/folder'
 import { decryptStorageKey } from '../utils/fileProtection'
+import { deleteStorageFiles } from '../utils/storage'
 
 const createFolderService = async (payload: FolderPayload) => {
   const fileRepository = useTypeORM(FileEntity)
@@ -100,8 +100,7 @@ const deleteFolder = async (folder: FolderEntity) => {
   if (folder.files && folder.files.length > 0) {
     const storageKeys = folder.files.map((f) => decryptStorageKey(f.masterEncryptedStorageKey, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!))
 
-    const utapi = new UTApi()
-    await utapi.deleteFiles(storageKeys)
+    await deleteStorageFiles(storageKeys)
     await fileRepository.remove(folder.files)
   }
 

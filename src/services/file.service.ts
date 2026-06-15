@@ -1,7 +1,6 @@
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { DeepPartial } from 'typeorm'
-import { UTApi } from 'uploadthing/server'
 import { PREVIEWABLE_TYPES } from '../constants'
 import { useTypeORM } from '../data-source'
 import { FileEntity } from '../entity/file.entity'
@@ -10,10 +9,11 @@ import { AccessType } from '../types/common'
 import { FileType } from '../types/file'
 import { signAccessToken, verifyAccessToken } from '../utils/accessToken'
 import { decryptStorageKey, encryptStorageKey } from '../utils/fileProtection'
+import { deleteStorageFiles } from '../utils/storage'
 
 const getFileByToken = async (token: string) => {
   const fileRepository = useTypeORM(FileEntity)
-  const fileByToken = await fileRepository.findOneBy({ shareToken: token })
+  const fileByToken = await fileRepository.findOne({ where: { shareToken: token }, relations: { folder: true } })
   if (!fileByToken) throw new AppError('File not found', 404)
   return fileByToken
 }
@@ -26,8 +26,7 @@ const deleteFileById = async (id: string) => {
 
   const storageKey = decryptStorageKey(file.masterEncryptedStorageKey, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!)
 
-  const utapi = new UTApi()
-  await utapi.deleteFiles([storageKey])
+  await deleteStorageFiles([storageKey])
 
   await fileRepository.remove(file)
 }
@@ -153,8 +152,7 @@ const deleteFileByShareToken = async (token: string) => {
 
   const storageKey = decryptStorageKey(file.masterEncryptedStorageKey, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!)
 
-  const utapi = new UTApi()
-  await utapi.deleteFiles([storageKey])
+  await deleteStorageFiles([storageKey])
 
   await fileRepository.remove(file)
 }
@@ -169,9 +167,8 @@ export const deleteExpiredFiles = async () => {
     return { deleted: 0 }
   }
 
-  const utapi = new UTApi()
   const storageKeys = expiredFiles.map((f) => decryptStorageKey(f.masterEncryptedStorageKey, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!))
-  await utapi.deleteFiles(storageKeys)
+  await deleteStorageFiles(storageKeys)
 
   await fileRepository.remove(expiredFiles)
 
@@ -179,7 +176,7 @@ export const deleteExpiredFiles = async () => {
 }
 
 const getFilesByOwner = async (ownerId: string) => {
-  return useTypeORM(FileEntity).find({ where: { ownerId }, order: { createdAt: 'DESC' } })
+  return useTypeORM(FileEntity).find({ where: { ownerId }, relations: { folder: true }, order: { createdAt: 'DESC' } })
 }
 
 export { deleteFileById, deleteFileByShareToken, getFileByToken, getFileDownloadUrl, getFilePreview, getFilesByOwner, uploadFileService, verifyFilePassword }

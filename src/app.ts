@@ -3,13 +3,13 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import express from 'express'
 import morgan from 'morgan'
-import { UTApi } from 'uploadthing/server'
 import { AppDataSource } from './data-source'
 import { errorHandler } from './middleware/errorHandler'
 import authRouter from './routes/auth.routes'
 import fileRouter from './routes/file.routes'
 import folderRouter from './routes/folder.routes'
 import { uploadThingRouter } from './routes/uploadthing.routes'
+import { deleteStorageFiles } from './utils/storage'
 
 dotenv.config()
 
@@ -25,11 +25,14 @@ app.use((req, res, next) => {
   console.log('Content-Type:', req.headers['content-type'])
   next()
 })
-app.delete('/api/uploadthing', async (req, res) => {
-  const { storageKey } = req.body
-  const utapi = new UTApi()
-  await utapi.deleteFiles(storageKey)
-  res.json({ message: 'ok' })
+app.delete('/api/uploadthing', async (req, res, next) => {
+  try {
+    const { storageKey } = req.body
+    await deleteStorageFiles(Array.isArray(storageKey) ? storageKey : [storageKey])
+    res.json({ message: 'ok' })
+  } catch (error) {
+    next(error)
+  }
 })
 app.use('/api/uploadthing', uploadThingRouter)
 // Health Check
