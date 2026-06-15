@@ -1,22 +1,21 @@
 import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { DeepPartial } from 'typeorm'
-import { UTApi } from 'uploadthing/server'
 import { FileEntity } from '../entity/file.entity'
 import { AppError } from '../errors/AppError'
 import { deleteExpiredFiles, deleteFileById, deleteFileByShareToken, getFileByToken, getFileDownloadUrl, getFilePreview, getFilesByOwner, uploadFileService, verifyFilePassword } from '../services/file.service'
 import { TypedBodyRequest } from '../types/common'
 import createJsonResponse from '../utils/createJsonResponse'
-import { decryptStorageKey } from '../utils/fileProtection'
 
 const getFileByShareToken = async (req: Request<{ token: string }>, res: Response, next: NextFunction) => {
   try {
     const { token } = req.params
     const file = await getFileByToken(token)
-    const { password, storageKey, id, deviceInfo, clientId, ...rest } = file
+    const { password, storageKey, id, deviceInfo, clientId, folder, ...rest } = file
+    const folders = (folder ?? []).map(({ id, folderName }) => ({ id, folderName }))
     return createJsonResponse(res, {
       msg: 'File fetched successfully',
-      data: { ...rest, uploadDate: rest.createdAt },
+      data: { ...rest, folders, uploadDate: rest.createdAt },
       status: 200,
     })
   } catch (error) {
@@ -31,8 +30,9 @@ const getMyFiles = async (req: Request, res: Response, next: NextFunction) => {
     const files = await getFilesByOwner(req.user.id)
 
     const data = files.map((file) => {
-      const { password, storageKey, masterEncryptedStorageKey, deviceInfo, clientId, salt, ...rest } = file
-      return rest
+      const { password, storageKey, masterEncryptedStorageKey, deviceInfo, clientId, salt, folder, ...rest } = file
+      const folders = (folder ?? []).map(({ id, folderName }) => ({ id, folderName }))
+      return { ...rest, folders }
     })
 
     return createJsonResponse(res, { msg: 'Files fetched', data, status: StatusCodes.OK })
@@ -112,14 +112,6 @@ const downloadFile = async (req: Request<{ token: string }, {}, { accessToken?: 
 const deleteFileByShareTokenController = async (req: Request<{ token: string }>, res: Response, next: NextFunction) => {
   try {
     const { token } = req.params
-    const file = await getFileByToken(token)
-
-    if (!file) throw new AppError('File not found', StatusCodes.BAD_REQUEST)
-
-    const { masterEncryptedStorageKey } = file
-    const utapi = new UTApi()
-    const storageKey = decryptStorageKey(masterEncryptedStorageKey, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!)
-    await utapi.deleteFiles(storageKey)
     await deleteFileByShareToken(token)
 
     return createJsonResponse(res, { msg: 'File deleted successfully', data: null, status: 200 })

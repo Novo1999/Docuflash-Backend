@@ -4,6 +4,7 @@ import { UserEntity } from '../entity/user.entity'
 import { AppError } from '../errors/AppError'
 import { LoginPayload, OAuthProvider, RegisterPayload, UpdateProfilePayload } from '../types/auth'
 import { getSupabaseAdminClient, getSupabaseAuthClient, getSupabaseOAuthClient, MemoryStorage } from '../utils/supabase'
+import { deleteStorageFiles, extractUploadThingKey } from '../utils/storage'
 
 const mapSession = (session: Session) => ({
   accessToken: session.access_token,
@@ -122,10 +123,28 @@ const updateProfile = async (userId: string, updates: UpdateProfilePayload) => {
   const user = await userRepository.findOneBy({ id: userId })
   if (!user) throw new AppError('User not found', 404)
 
+  const previousAvatarUrl = user.avatarUrl
+
   if (updates.avatarUrl !== undefined) user.avatarUrl = updates.avatarUrl
   if (updates.displayName !== undefined) user.displayName = updates.displayName
 
-  return userRepository.save(user)
+  const saved = await userRepository.save(user)
+
+  // Best-effort cleanup of the replaced avatar. Only deletes genuine
+  // UploadThing files (skips OAuth avatar URLs) and never fails the profile
+  // update if storage is unreachable — the new avatar is already saved.
+  if (updates.avatarUrl !== undefined && previousAvatarUrl && previousAvatarUrl !== updates.avatarUrl) {
+    const oldKey = extractUploadThingKey(previousAvatarUrl)
+    if (oldKey) {
+      try {
+        await deleteStorageFiles([oldKey])
+      } catch (error) {
+        console.error('Failed to delete previous avatar from storage', error)
+      }
+    }
+  }
+
+  return saved
 }
 
 export { getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, logoutUser, refreshSession, registerUser, updateProfile }
