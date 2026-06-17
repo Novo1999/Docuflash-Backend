@@ -12,8 +12,10 @@ export const uploadRouter = {
     'application/vnd.ms-excel': config,
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': config, // 👈 .xlsx
     'application/zip': config,
+    'application/x-zip-compressed': config, // 👈 .zip on Windows Chrome/Edge
+    'application/x-zip': config, // 👈 older browser label for .zip
     text: config,
-  }).onUploadComplete((data) => {
+  } as Parameters<typeof f>[0]).onUploadComplete((data) => {
     console.log('upload completed', data)
   }),
   avatarUploader: f({ image: avatarConfig }).onUploadComplete((data) => {

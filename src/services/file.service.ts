@@ -116,6 +116,9 @@ const getFilePreview = async (token: string, accessToken?: string) => {
     case FileType.DOCX:
       return { kind: 'docx_url' as const, url: fileUrl }
 
+    case FileType.ZIP:
+      return { kind: 'zip_url' as const, url: fileUrl }
+
     default:
       throw new AppError('Preview not supported for this file type', 400)
   }
