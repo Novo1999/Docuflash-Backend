@@ -27,7 +27,8 @@ const getMyFiles = async (req: Request, res: Response, next: NextFunction) => {
   try {
     if (!req.user) throw new AppError('Authentication required', StatusCodes.UNAUTHORIZED)
 
-    const files = await getFilesByOwner(req.user.id)
+    const search = typeof req.query.search === 'string' ? req.query.search : undefined
+    const files = await getFilesByOwner(req.user.id, search)
 
     const data = files.map((file) => {
       const { password, storageKey, masterEncryptedStorageKey, deviceInfo, clientId, salt, folder, ...rest } = file

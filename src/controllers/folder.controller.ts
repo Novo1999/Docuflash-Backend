@@ -91,7 +91,8 @@ const getMyFolders = async (req: Request, res: Response, next: NextFunction) => 
       throw new AppError('Authentication required', StatusCodes.UNAUTHORIZED)
     }
 
-    const folders = await getFoldersByOwner(req.user.id)
+    const search = typeof req.query.search === 'string' ? req.query.search : undefined
+    const folders = await getFoldersByOwner(req.user.id, search)
 
     const safeFolders = folders.map((folder) => {
       const { password, ...rest } = folder

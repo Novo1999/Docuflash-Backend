@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
-import { DeepPartial } from 'typeorm'
+import { DeepPartial, FindOptionsWhere, ILike } from 'typeorm'
 import { PREVIEWABLE_TYPES } from '../constants'
 import { useTypeORM } from '../data-source'
 import { FileEntity } from '../entity/file.entity'
@@ -178,8 +178,12 @@ export const deleteExpiredFiles = async () => {
   return { deleted: expiredFiles.length }
 }
 
-const getFilesByOwner = async (ownerId: string) => {
-  return useTypeORM(FileEntity).find({ where: { ownerId }, relations: { folder: true }, order: { createdAt: 'DESC' } })
+const getFilesByOwner = async (ownerId: string, search?: string) => {
+  const where: FindOptionsWhere<FileEntity> = { ownerId }
+  const term = search?.trim()
+  if (term) where.fileName = ILike(`%${term}%`)
+
+  return useTypeORM(FileEntity).find({ where, relations: { folder: true }, order: { createdAt: 'DESC' } })
 }
 
 export { deleteFileById, deleteFileByShareToken, getFileByToken, getFileDownloadUrl, getFilePreview, getFilesByOwner, uploadFileService, verifyFilePassword }

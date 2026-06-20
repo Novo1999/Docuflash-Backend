@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs'
+import { FindOptionsWhere, ILike } from 'typeorm'
 import { useTypeORM } from '../data-source'
 import { FileEntity } from '../entity/file.entity'
 import { FolderEntity } from '../entity/folder.entity'
@@ -89,8 +90,12 @@ const getFolderByIdService = async (id: string) => {
   return folder
 }
 
-const getFoldersByOwner = async (ownerId: string) => {
-  return useTypeORM(FolderEntity).find({ where: { ownerId }, order: { createdAt: 'DESC' } })
+const getFoldersByOwner = async (ownerId: string, search?: string) => {
+  const where: FindOptionsWhere<FolderEntity> = { ownerId }
+  const term = search?.trim()
+  if (term) where.folderName = ILike(`%${term}%`)
+
+  return useTypeORM(FolderEntity).find({ where, order: { createdAt: 'DESC' } })
 }
 
 const deleteFolder = async (folder: FolderEntity) => {
