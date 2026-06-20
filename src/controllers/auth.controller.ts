@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { AppError } from '../errors/AppError'
-import { getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, logoutUser, refreshSession, registerUser, updateProfile } from '../services/auth.service'
-import { LoginPayload, OAuthProvider, RefreshPayload, RegisterPayload, UpdateProfilePayload } from '../types/auth'
+import { getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, loginWithGoogleIdToken, logoutUser, refreshSession, registerUser, updateProfile } from '../services/auth.service'
+import { GoogleNativePayload, LoginPayload, OAuthProvider, RefreshPayload, RegisterPayload, UpdateProfilePayload } from '../types/auth'
 import { TypedBodyRequest } from '../types/common'
 import createJsonResponse from '../utils/createJsonResponse'
 
@@ -30,6 +30,18 @@ const login = async (req: TypedBodyRequest<LoginPayload>, res: Response, next: N
     if (!email || !password) throw new AppError('Email and password are required', StatusCodes.BAD_REQUEST)
 
     const result = await loginUser(req.body)
+    return createJsonResponse(res, { msg: 'Login successful', data: result, status: StatusCodes.OK })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const googleNative = async (req: TypedBodyRequest<GoogleNativePayload>, res: Response, next: NextFunction) => {
+  try {
+    const { idToken } = req.body
+    if (!idToken) throw new AppError('idToken is required', StatusCodes.BAD_REQUEST)
+
+    const result = await loginWithGoogleIdToken(req.body)
     return createJsonResponse(res, { msg: 'Login successful', data: result, status: StatusCodes.OK })
   } catch (error) {
     next(error)
@@ -142,4 +154,4 @@ const oauthCallback = async (req: Request, res: Response, next: NextFunction) =>
   }
 }
 
-export { login, logout, me, oauthCallback, oauthRedirect, refresh, register, updateMe }
+export { googleNative, login, logout, me, oauthCallback, oauthRedirect, refresh, register, updateMe }

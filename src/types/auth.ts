@@ -21,6 +21,12 @@ export type RefreshPayload = {
 
 export type OAuthProvider = 'google' | 'github'
 
+export type GoogleNativePayload = {
+  idToken: string
+  // Optional nonce — only needed if you request one from the native picker.
+  nonce?: string
+}
+
 export type UpdateProfilePayload = {
   avatarUrl?: string
   displayName?: string

@@ -2,7 +2,7 @@ import { Session, User } from '@supabase/supabase-js'
 import { useTypeORM } from '../data-source'
 import { UserEntity } from '../entity/user.entity'
 import { AppError } from '../errors/AppError'
-import { LoginPayload, OAuthProvider, RegisterPayload, UpdateProfilePayload } from '../types/auth'
+import { GoogleNativePayload, LoginPayload, OAuthProvider, RegisterPayload, UpdateProfilePayload } from '../types/auth'
 import { getSupabaseAdminClient, getSupabaseAuthClient, getSupabaseOAuthClient, MemoryStorage } from '../utils/supabase'
 import { deleteStorageFiles, extractUploadThingKey } from '../utils/storage'
 
@@ -60,6 +60,23 @@ const loginUser = async (payload: LoginPayload) => {
 
   if (error) throw new AppError(error.message, error.status ?? 401)
   if (!data.session || !data.user) throw new AppError('Invalid credentials', 401)
+
+  const user = await syncUser(data.user)
+
+  return { user, session: mapSession(data.session) }
+}
+
+const loginWithGoogleIdToken = async (payload: GoogleNativePayload) => {
+  const supabase = getSupabaseAuthClient()
+
+  const { data, error } = await supabase.auth.signInWithIdToken({
+    provider: 'google',
+    token: payload.idToken,
+    nonce: payload.nonce,
+  })
+
+  if (error) throw new AppError(error.message, error.status ?? 401)
+  if (!data.session || !data.user) throw new AppError('Invalid Google credentials', 401)
 
   const user = await syncUser(data.user)
 
@@ -147,4 +164,4 @@ const updateProfile = async (userId: string, updates: UpdateProfilePayload) => {
   return saved
 }
 
-export { getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, logoutUser, refreshSession, registerUser, updateProfile }
+export { getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, loginWithGoogleIdToken, logoutUser, refreshSession, registerUser, updateProfile }
