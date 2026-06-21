@@ -4,6 +4,7 @@ import { DeepPartial, FindOptionsWhere, ILike } from 'typeorm'
 import { PREVIEWABLE_TYPES } from '../constants'
 import { useTypeORM } from '../data-source'
 import { FileEntity } from '../entity/file.entity'
+import { FolderEntity } from '../entity/folder.entity'
 import { AppError } from '../errors/AppError'
 import { AccessType } from '../types/common'
 import { FileType } from '../types/file'
@@ -144,7 +145,40 @@ const getFileDownloadUrl = async (token: string, accessToken?: string) => {
   // Increment downloadCount
   await fileRepository.increment({ shareToken: token }, 'downloadCount', 1)
 
+  if (file.deleteAfterDownload) {
+    setTimeout(() => {
+      void purgeDownloadedFile(file.id)
+    }, DELETE_AFTER_DOWNLOAD_DELAY_MS)
+  }
+
   return { fileUrl: `https://utfs.io/f/${storageKey}` }
+}
+
+const DELETE_AFTER_DOWNLOAD_DELAY_MS = 90_000
+
+const purgeDownloadedFile = async (fileId: string) => {
+  try {
+    const fileRepository = useTypeORM(FileEntity)
+    const folderRepository = useTypeORM(FolderEntity)
+
+    const file = await fileRepository.findOne({ where: { id: fileId }, relations: { folder: true } })
+    if (!file) return
+
+    const storageKey = decryptStorageKey(file.masterEncryptedStorageKey, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!)
+    await deleteStorageFiles([storageKey])
+
+    const parentFolders = file.folder ?? []
+    await fileRepository.remove(file)
+
+    for (const parent of parentFolders) {
+      const fresh = await folderRepository.findOne({ where: { id: parent.id }, relations: { files: true } })
+      if (fresh && fresh.files.length === 0) {
+        await folderRepository.remove(fresh)
+      }
+    }
+  } catch (error) {
+    console.error('Failed to purge file after download', { fileId, error })
+  }
 }
 
 const deleteFileByShareToken = async (token: string) => {

@@ -48,6 +48,9 @@ export class FileEntity {
   @Column()
   downloadCount!: number
 
+  @Column({ default: false })
+  deleteAfterDownload!: boolean
+
   @Column('timestamp without time zone')
   expireAt!: Date
 
