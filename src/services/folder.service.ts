@@ -1,13 +1,16 @@
 import bcrypt from 'bcryptjs'
-import { FindOptionsWhere, ILike } from 'typeorm'
+import { FindOptionsWhere, ILike, LessThanOrEqual } from 'typeorm'
 import { useTypeORM } from '../data-source'
 import { FileEntity } from '../entity/file.entity'
 import { FolderEntity } from '../entity/folder.entity'
 import { AppError } from '../errors/AppError'
 import { AccessType } from '../types/common'
-import { FolderPayload } from '../types/folder'
+import { FolderPayload, RequestFilePayload } from '../types/folder'
 import { decryptStorageKey } from '../utils/fileProtection'
 import { deleteStorageFiles } from '../utils/storage'
+import { uploadFileService } from './file.service'
+
+const REQUEST_EXPIRY_MS = 2 * 60 * 60 * 1000
 
 const createFolderService = async (payload: FolderPayload) => {
   const fileRepository = useTypeORM(FileEntity)
@@ -34,6 +37,61 @@ const createFolderService = async (payload: FolderPayload) => {
   })
 
   return folderRepository.save(folder)
+}
+
+const createUploadRequestService = async (payload: { folderName?: string, shareToken: string, ownerId?: string | null, clientId?: string }) => {
+  const folderRepository = useTypeORM(FolderEntity)
+
+  const folder = folderRepository.create({
+    folderName: payload.folderName?.trim() || 'File request',
+    shareToken: payload.shareToken,
+    files: [],
+    accessType: AccessType.PUBLIC,
+    acceptsUploads: true,
+    clientId: payload.clientId,
+    ownerId: payload.ownerId ?? null,
+    expireAt: new Date(Date.now() + REQUEST_EXPIRY_MS),
+  })
+
+  return folderRepository.save(folder)
+}
+
+const addFilesToRequestService = async (token: string, files: RequestFilePayload[]) => {
+  if (!files?.length) throw new AppError('No files to upload', 400)
+
+  const folderRepository = useTypeORM(FolderEntity)
+
+  const folder = await folderRepository.findOne({
+    where: { shareToken: token },
+    relations: { files: true },
+  })
+
+  if (!folder) throw new AppError('Folder not found', 404)
+  if (!folder.acceptsUploads) throw new AppError('This folder is not accepting uploads', 400)
+
+  const expireAt = new Date(Date.now() + REQUEST_EXPIRY_MS)
+
+  const savedFiles: FileEntity[] = []
+  for (const file of files) {
+    const saved = await uploadFileService({
+      fileName: file.fileName,
+      fileType: file.fileType,
+      fileSize: file.fileSize,
+      storageKey: file.storageKey,
+      clientId: file.clientId,
+      deviceInfo: file.deviceInfo,
+      accessType: AccessType.PUBLIC,
+      ownerId: null,
+      expireAt,
+      downloadCount: 0,
+    })
+    savedFiles.push(saved)
+  }
+
+  folder.files = [...folder.files, ...savedFiles]
+  await folderRepository.save(folder)
+
+  return savedFiles
 }
 
 const getFolderByTokenService = async (token: string) => {
@@ -137,5 +195,21 @@ const deleteFolderByIdService = async (id: string) => {
 
   await deleteFolder(folder)
 }
-export { createFolderService, deleteFolderByIdService, deleteFolderByTokenService, getFolderByIdService, getFolderByTokenService, getFoldersByOwner, unlockFolderService }
+
+const deleteExpiredRequestFolders = async () => {
+  const folderRepository = useTypeORM(FolderEntity)
+
+  const expiredFolders = await folderRepository.find({
+    where: { acceptsUploads: true, expireAt: LessThanOrEqual(new Date()) },
+    relations: { files: true },
+  })
+
+  for (const folder of expiredFolders) {
+    await deleteFolder(folder)
+  }
+
+  return { deleted: expiredFolders.length }
+}
+
+export { addFilesToRequestService, createFolderService, createUploadRequestService, deleteExpiredRequestFolders, deleteFolderByIdService, deleteFolderByTokenService, getFolderByIdService, getFolderByTokenService, getFoldersByOwner, unlockFolderService }
 

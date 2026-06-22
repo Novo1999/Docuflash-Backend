@@ -4,6 +4,7 @@ import { DeepPartial } from 'typeorm'
 import { FileEntity } from '../entity/file.entity'
 import { AppError } from '../errors/AppError'
 import { deleteExpiredFiles, deleteFileById, deleteFileByShareToken, getFileByToken, getFileDownloadUrl, getFilePreview, getFilesByOwner, uploadFileService, verifyFilePassword } from '../services/file.service'
+import { deleteExpiredRequestFolders } from '../services/folder.service'
 import { TypedBodyRequest } from '../types/common'
 import createJsonResponse from '../utils/createJsonResponse'
 
@@ -127,7 +128,9 @@ const cleanupExpiredFiles = async (req: Request, res: Response, next: NextFuncti
     if (apiKey !== process.env.CLEANUP_API_KEY) {
       throw new AppError('Unauthorized', StatusCodes.UNAUTHORIZED)
     }
-    const result = await deleteExpiredFiles()
+    const filesResult = await deleteExpiredFiles()
+    const foldersResult = await deleteExpiredRequestFolders()
+    const result = { files: filesResult.deleted, requestFolders: foldersResult.deleted }
     console.log('CLEANUP', result)
     return createJsonResponse(res, { msg: 'Cleanup complete', data: result, status: 200 })
   } catch (error) {

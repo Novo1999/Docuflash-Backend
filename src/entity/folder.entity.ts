@@ -39,4 +39,7 @@ export class FolderEntity {
 
   @Column('timestamp without time zone', { nullable: true })
   expireAt!: Date
+
+  @Column({ default: false })
+  acceptsUploads!: boolean
 }

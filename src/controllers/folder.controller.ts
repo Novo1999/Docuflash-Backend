@@ -2,9 +2,9 @@ import crypto from 'crypto'
 import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { AppError } from '../errors/AppError'
-import { createFolderService, deleteFolderByIdService, deleteFolderByTokenService, getFolderByIdService, getFolderByTokenService, getFoldersByOwner, unlockFolderService } from '../services/folder.service'
+import { addFilesToRequestService, createFolderService, createUploadRequestService, deleteFolderByIdService, deleteFolderByTokenService, getFolderByIdService, getFolderByTokenService, getFoldersByOwner, unlockFolderService } from '../services/folder.service'
 import { TypedBodyRequest } from '../types/common'
-import { FolderPayload } from '../types/folder'
+import { FolderPayload, RequestFilePayload, UploadRequestPayload } from '../types/folder'
 import createJsonResponse from '../utils/createJsonResponse'
 
 const createFolder = async (req: TypedBodyRequest<FolderPayload>, res: Response, next: NextFunction) => {
@@ -13,6 +13,41 @@ const createFolder = async (req: TypedBodyRequest<FolderPayload>, res: Response,
     const folderResponse = await createFolderService({ ...req.body, shareToken, ownerId: req.user?.id ?? null })
 
     return createJsonResponse(res, { msg: 'Folder uploaded', data: folderResponse, status: StatusCodes.OK })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const createUploadRequest = async (req: TypedBodyRequest<UploadRequestPayload>, res: Response, next: NextFunction) => {
+  try {
+    const shareToken = crypto.randomBytes(16).toString('hex')
+    const folder = await createUploadRequestService({
+      folderName: req.body.folderName,
+      clientId: req.body.clientId,
+      shareToken,
+      ownerId: req.user?.id ?? null,
+    })
+
+    return createJsonResponse(res, {
+      msg: 'Upload request created',
+      data: { shareToken: folder.shareToken, folderName: folder.folderName, acceptsUploads: folder.acceptsUploads, expireAt: folder.expireAt },
+      status: StatusCodes.OK,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const attachFilesToRequest = async (req: Request<{ token: string }, unknown, { files: RequestFilePayload[] }>, res: Response, next: NextFunction) => {
+  try {
+    const savedFiles = await addFilesToRequestService(req.params.token, req.body.files)
+
+    const safeFiles = savedFiles.map((file) => {
+      const { password, storageKey, deviceInfo, clientId, masterEncryptedStorageKey, salt, ...fileRest } = file
+      return fileRest
+    })
+
+    return createJsonResponse(res, { msg: 'Files uploaded', data: safeFiles, status: StatusCodes.OK })
   } catch (error) {
     next(error)
   }
@@ -105,5 +140,5 @@ const getMyFolders = async (req: Request, res: Response, next: NextFunction) => 
   }
 }
 
-export { createFolder, deleteFolderById, deleteFolderByShareToken, getFolderById, getFolderByShareToken, getMyFolders, unlockFolder }
+export { attachFilesToRequest, createFolder, createUploadRequest, deleteFolderById, deleteFolderByShareToken, getFolderById, getFolderByShareToken, getMyFolders, unlockFolder }
 
