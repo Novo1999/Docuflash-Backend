@@ -2,6 +2,8 @@ export type AuthUser = {
   id: string
   email: string
   provider?: string
+  defaultExpiry?: string
+  defaultPrivacy?: 'public' | 'protected'
 }
 
 export type RegisterPayload = {
@@ -30,4 +32,6 @@ export type GoogleNativePayload = {
 export type UpdateProfilePayload = {
   avatarUrl?: string
   displayName?: string
+  defaultExpiry?: string
+  defaultPrivacy?: 'public' | 'protected'
 }

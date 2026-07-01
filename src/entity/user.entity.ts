@@ -17,6 +17,12 @@ export class UserEntity {
   @Column({ nullable: true })
   provider!: string
 
+  @Column({ default: '7d' })
+  defaultExpiry!: string
+
+  @Column({ type: 'varchar', default: 'protected' })
+  defaultPrivacy!: 'public' | 'protected'
+
   @CreateDateColumn()
   createdAt!: Date
 

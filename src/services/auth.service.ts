@@ -3,8 +3,8 @@ import { useTypeORM } from '../data-source'
 import { UserEntity } from '../entity/user.entity'
 import { AppError } from '../errors/AppError'
 import { GoogleNativePayload, LoginPayload, OAuthProvider, RegisterPayload, UpdateProfilePayload } from '../types/auth'
-import { getSupabaseAdminClient, getSupabaseAuthClient, getSupabaseOAuthClient, MemoryStorage } from '../utils/supabase'
 import { deleteStorageFiles, extractUploadThingKey } from '../utils/storage'
+import { getSupabaseAdminClient, getSupabaseAuthClient, getSupabaseOAuthClient, MemoryStorage } from '../utils/supabase'
 
 const mapSession = (session: Session) => ({
   accessToken: session.access_token,
@@ -16,14 +16,25 @@ const mapSession = (session: Session) => ({
 
 const syncUser = async (user: User) => {
   const userRepository = useTypeORM(UserEntity)
-
   const metadata = user.user_metadata ?? {}
+  const existing = await userRepository.findOneBy({ id: user.id })
+
+  if (existing) {
+    existing.email = user.email ?? metadata.email ?? existing.email
+    existing.displayName = metadata.full_name ?? metadata.name ?? existing.displayName
+    existing.avatarUrl = metadata.avatar_url ?? metadata.picture ?? existing.avatarUrl
+    existing.provider = user.app_metadata?.provider ?? existing.provider
+    return userRepository.save(existing)
+  }
+
   const entity = userRepository.create({
     id: user.id,
     email: user.email ?? metadata.email ?? '',
     displayName: metadata.full_name ?? metadata.name ?? metadata.user_name,
     avatarUrl: metadata.avatar_url ?? metadata.picture,
     provider: user.app_metadata?.provider,
+    defaultExpiry: '7d',
+    defaultPrivacy: 'protected',
   })
 
   return userRepository.save(entity)
@@ -144,6 +155,8 @@ const updateProfile = async (userId: string, updates: UpdateProfilePayload) => {
 
   if (updates.avatarUrl !== undefined) user.avatarUrl = updates.avatarUrl
   if (updates.displayName !== undefined) user.displayName = updates.displayName
+  if (updates.defaultExpiry !== undefined) user.defaultExpiry = updates.defaultExpiry
+  if (updates.defaultPrivacy !== undefined) user.defaultPrivacy = updates.defaultPrivacy
 
   const saved = await userRepository.save(user)
 
@@ -165,3 +178,4 @@ const updateProfile = async (userId: string, updates: UpdateProfilePayload) => {
 }
 
 export { getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, loginWithGoogleIdToken, logoutUser, refreshSession, registerUser, updateProfile }
+

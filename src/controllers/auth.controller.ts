@@ -88,12 +88,28 @@ const updateMe = async (req: TypedBodyRequest<UpdateProfilePayload>, res: Respon
   try {
     if (!req.user) throw new AppError('Authentication required', StatusCodes.UNAUTHORIZED)
 
-    const { avatarUrl, displayName } = req.body
-    if (avatarUrl === undefined && displayName === undefined) {
+    const { avatarUrl, displayName, defaultExpiry, defaultPrivacy } = req.body
+    if (avatarUrl === undefined && displayName === undefined && defaultExpiry === undefined && defaultPrivacy === undefined) {
       throw new AppError('Nothing to update', StatusCodes.BAD_REQUEST)
     }
 
-    const user = await updateProfile(req.user.id, { avatarUrl, displayName })
+    const expiryOptions = ['1h', '6h', '24h', '3d', '7d']
+    const privacyOptions = ['public', 'protected']
+
+    if (defaultExpiry !== undefined && !expiryOptions.includes(defaultExpiry)) {
+      throw new AppError('Invalid default expiry', StatusCodes.BAD_REQUEST)
+    }
+
+    if (defaultPrivacy !== undefined && !privacyOptions.includes(defaultPrivacy)) {
+      throw new AppError('Invalid default privacy', StatusCodes.BAD_REQUEST)
+    }
+
+    const user = await updateProfile(req.user.id, {
+      avatarUrl,
+      displayName,
+      defaultExpiry,
+      defaultPrivacy,
+    })
     return createJsonResponse(res, { msg: 'Profile updated', data: user, status: StatusCodes.OK })
   } catch (error) {
     next(error)
@@ -155,3 +171,4 @@ const oauthCallback = async (req: Request, res: Response, next: NextFunction) =>
 }
 
 export { googleNative, login, logout, me, oauthCallback, oauthRedirect, refresh, register, updateMe }
+
