@@ -4,7 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 import { AppError } from '../errors/AppError'
 import { addFilesToRequestService, createFolderService, createUploadRequestService, deleteFolderByIdService, deleteFolderByTokenService, getFolderByIdService, getFolderByTokenService, getFoldersByOwner, unlockFolderService } from '../services/folder.service'
 import { TypedBodyRequest } from '../types/common'
-import { FolderPayload, RequestFilePayload, UploadRequestPayload } from '../types/folder'
+import { AttachRequestFilesPayload, FolderPayload, UploadRequestPayload } from '../types/folder'
 import createJsonResponse from '../utils/createJsonResponse'
 
 const createFolder = async (req: TypedBodyRequest<FolderPayload>, res: Response, next: NextFunction) => {
@@ -24,13 +24,15 @@ const createUploadRequest = async (req: TypedBodyRequest<UploadRequestPayload>, 
     const folder = await createUploadRequestService({
       folderName: req.body.folderName,
       clientId: req.body.clientId,
+      accessType: req.body.accessType,
+      password: req.body.password,
       shareToken,
       ownerId: req.user?.id ?? null,
     })
 
     return createJsonResponse(res, {
       msg: 'Upload request created',
-      data: { shareToken: folder.shareToken, folderName: folder.folderName, acceptsUploads: folder.acceptsUploads, expireAt: folder.expireAt },
+      data: { shareToken: folder.shareToken, folderName: folder.folderName, accessType: folder.accessType, acceptsUploads: folder.acceptsUploads, expireAt: folder.expireAt },
       status: StatusCodes.OK,
     })
   } catch (error) {
@@ -38,9 +40,9 @@ const createUploadRequest = async (req: TypedBodyRequest<UploadRequestPayload>, 
   }
 }
 
-const attachFilesToRequest = async (req: Request<{ token: string }, unknown, { files: RequestFilePayload[] }>, res: Response, next: NextFunction) => {
+const attachFilesToRequest = async (req: Request<{ token: string }, unknown, AttachRequestFilesPayload>, res: Response, next: NextFunction) => {
   try {
-    const savedFiles = await addFilesToRequestService(req.params.token, req.body.files)
+    const savedFiles = await addFilesToRequestService(req.params.token, req.body.files, req.body.password)
 
     const safeFiles = savedFiles.map((file) => {
       const { password, storageKey, deviceInfo, clientId, masterEncryptedStorageKey, salt, ...fileRest } = file

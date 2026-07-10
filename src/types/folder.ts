@@ -15,6 +15,13 @@ export type FolderPayload = {
 export type UploadRequestPayload = {
   folderName?: string
   clientId?: string
+  accessType?: AccessType
+  password?: string
+}
+
+export type AttachRequestFilesPayload = {
+  files: RequestFilePayload[]
+  password?: string
 }
 
 export type RequestFilePayload = {

@@ -39,14 +39,26 @@ const createFolderService = async (payload: FolderPayload) => {
   return folderRepository.save(folder)
 }
 
-const createUploadRequestService = async (payload: { folderName?: string, shareToken: string, ownerId?: string | null, clientId?: string }) => {
+const createUploadRequestService = async (payload: { folderName?: string, shareToken: string, ownerId?: string | null, clientId?: string, accessType?: AccessType, password?: string }) => {
   const folderRepository = useTypeORM(FolderEntity)
+
+  const accessType = payload.accessType ?? AccessType.PUBLIC
+
+  let hashedPassword: string | undefined
+
+  if (accessType === AccessType.PROTECTED) {
+    if (!payload.password) throw new AppError('A password is required for protected requests', 400)
+
+    const salt = bcrypt.genSaltSync(10)
+    hashedPassword = bcrypt.hashSync(payload.password, salt)
+  }
 
   const folder = folderRepository.create({
     folderName: payload.folderName?.trim() || 'File request',
     shareToken: payload.shareToken,
     files: [],
-    accessType: AccessType.PUBLIC,
+    accessType,
+    password: hashedPassword,
     acceptsUploads: true,
     clientId: payload.clientId,
     ownerId: payload.ownerId ?? null,
@@ -56,7 +68,7 @@ const createUploadRequestService = async (payload: { folderName?: string, shareT
   return folderRepository.save(folder)
 }
 
-const addFilesToRequestService = async (token: string, files: RequestFilePayload[]) => {
+const addFilesToRequestService = async (token: string, files: RequestFilePayload[], password?: string) => {
   if (!files?.length) throw new AppError('No files to upload', 400)
 
   const folderRepository = useTypeORM(FolderEntity)
@@ -68,6 +80,13 @@ const addFilesToRequestService = async (token: string, files: RequestFilePayload
 
   if (!folder) throw new AppError('Folder not found', 404)
   if (!folder.acceptsUploads) throw new AppError('This folder is not accepting uploads', 400)
+
+  if (folder.accessType === AccessType.PROTECTED) {
+    if (!password) throw new AppError('Password is required', 401)
+
+    const isValid = await bcrypt.compare(password, folder.password)
+    if (!isValid) throw new AppError('Invalid password', 401)
+  }
 
   const expireAt = new Date(Date.now() + REQUEST_EXPIRY_MS)
 
@@ -108,6 +127,9 @@ const getFolderByTokenService = async (token: string) => {
     return {
       accessType: folder.accessType,
       folderName: folder.folderName,
+      shareToken: folder.shareToken,
+      acceptsUploads: folder.acceptsUploads,
+      expireAt: folder.expireAt,
       files: [],
     }
   }
