@@ -8,6 +8,12 @@ import createJsonResponse from '../utils/createJsonResponse'
 
 const OAUTH_STATE_COOKIE = 'df_oauth_state'
 const OAUTH_PROVIDERS: OAuthProvider[] = ['google', 'github']
+const MOBILE_REDIRECT_SCHEME = 'docuflashmobile://'
+
+type OAuthStateCookie = {
+  storage: Record<string, string>
+  redirect?: string
+}
 
 const getFrontendUrl = () => process.env.FRONTEND_URL || 'http://localhost:3000'
 const getBackendUrl = () => process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`
@@ -123,10 +129,16 @@ const oauthRedirect = async (req: Request<{ provider: string }>, res: Response, 
       throw new AppError('Unsupported OAuth provider', StatusCodes.BAD_REQUEST)
     }
 
+    const requestedRedirect = typeof req.query.redirect === 'string' ? req.query.redirect : undefined
+    if (requestedRedirect && !requestedRedirect.startsWith(MOBILE_REDIRECT_SCHEME)) {
+      throw new AppError('Invalid redirect target', StatusCodes.BAD_REQUEST)
+    }
+
     const redirectTo = `${getBackendUrl()}/api/auth/callback`
     const { url, storageState } = await getOAuthUrl(provider, redirectTo)
 
-    res.cookie(OAUTH_STATE_COOKIE, JSON.stringify(storageState), {
+    const stateCookie: OAuthStateCookie = { storage: storageState, redirect: requestedRedirect }
+    res.cookie(OAUTH_STATE_COOKIE, JSON.stringify(stateCookie), {
       httpOnly: true,
       secure: process.env.NODE_ENV !== 'development',
       sameSite: 'lax',
@@ -139,21 +151,36 @@ const oauthRedirect = async (req: Request<{ provider: string }>, res: Response, 
   }
 }
 
+const parseOAuthStateCookie = (raw: string | undefined): OAuthStateCookie | null => {
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw) as OAuthStateCookie | Record<string, string>
+    if (parsed && typeof parsed === 'object' && 'storage' in parsed) {
+      const state = parsed as OAuthStateCookie
+      const redirect =
+        typeof state.redirect === 'string' && state.redirect.startsWith(MOBILE_REDIRECT_SCHEME) ? state.redirect : undefined
+      return { storage: state.storage ?? {}, redirect }
+    }
+    return { storage: parsed as Record<string, string> }
+  } catch {
+    return null
+  }
+}
+
 const oauthCallback = async (req: Request, res: Response, next: NextFunction) => {
-  const frontendUrl = getFrontendUrl()
+  const state = parseOAuthStateCookie(req.cookies?.[OAUTH_STATE_COOKIE])
+  const callbackTarget = state?.redirect ?? `${getFrontendUrl()}/auth/callback`
   try {
     const code = req.query.code as string | undefined
     const oauthError = req.query.error_description ?? req.query.error
 
     if (oauthError) {
-      return res.redirect(`${frontendUrl}/auth/callback#error=${encodeURIComponent(String(oauthError))}`)
+      return res.redirect(`${callbackTarget}#error=${encodeURIComponent(String(oauthError))}`)
     }
 
-    const stateCookie = req.cookies?.[OAUTH_STATE_COOKIE]
-    if (!code || !stateCookie) throw new AppError('Invalid OAuth callback', StatusCodes.BAD_REQUEST)
+    if (!code || !state) throw new AppError('Invalid OAuth callback', StatusCodes.BAD_REQUEST)
 
-    const storageState = JSON.parse(stateCookie) as Record<string, string>
-    const { session } = await handleOAuthCallback(code, storageState)
+    const { session } = await handleOAuthCallback(code, state.storage)
 
     res.clearCookie(OAUTH_STATE_COOKIE)
 
@@ -164,7 +191,7 @@ const oauthCallback = async (req: Request, res: Response, next: NextFunction) =>
       token_type: session.tokenType,
     }).toString()
 
-    return res.redirect(`${frontendUrl}/auth/callback#${fragment}`)
+    return res.redirect(`${callbackTarget}#${fragment}`)
   } catch (error) {
     next(error)
   }
