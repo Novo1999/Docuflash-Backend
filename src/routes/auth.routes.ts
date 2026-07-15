@@ -1,11 +1,13 @@
 import { Router } from 'express'
-import { googleNative, login, logout, me, oauthCallback, oauthRedirect, refresh, register, updateMe } from '../controllers/auth.controller'
+import { forgotPassword, googleNative, login, logout, me, oauthCallback, oauthRedirect, refresh, register, resetPassword, updateMe } from '../controllers/auth.controller'
 import { requireAuth } from '../middleware/auth'
 
 const router = Router()
 
 router.post('/register', register)
 router.post('/login', login)
+router.post('/forgot-password', forgotPassword)
+router.post('/reset-password', resetPassword)
 router.post('/refresh', refresh)
 router.post('/logout', requireAuth, logout)
 router.get('/me', requireAuth, me)

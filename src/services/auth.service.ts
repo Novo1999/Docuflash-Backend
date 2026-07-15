@@ -2,7 +2,7 @@ import { Session, User } from '@supabase/supabase-js'
 import { useTypeORM } from '../data-source'
 import { UserEntity } from '../entity/user.entity'
 import { AppError } from '../errors/AppError'
-import { GoogleNativePayload, LoginPayload, OAuthProvider, RegisterPayload, UpdateProfilePayload } from '../types/auth'
+import { GoogleNativePayload, LoginPayload, OAuthProvider, RegisterPayload, ResetPasswordPayload, UpdateProfilePayload } from '../types/auth'
 import { deleteStorageFiles, extractUploadThingKey } from '../utils/storage'
 import { getSupabaseAdminClient, getSupabaseAuthClient, getSupabaseOAuthClient, MemoryStorage } from '../utils/supabase'
 
@@ -105,6 +105,36 @@ const refreshSession = async (refreshToken: string) => {
   return { session: mapSession(data.session) }
 }
 
+const requestPasswordReset = async (email: string, redirectTo: string) => {
+  const supabase = getSupabaseAuthClient()
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+
+  if (error) throw new AppError(error.message, error.status ?? 400)
+}
+
+const resetPassword = async (payload: ResetPasswordPayload) => {
+  const supabase = getSupabaseAuthClient()
+
+  const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+    access_token: payload.accessToken,
+    refresh_token: payload.refreshToken,
+  })
+
+  if (sessionError || !sessionData.session || !sessionData.user) {
+    throw new AppError('Reset link is invalid or has expired', sessionError?.status ?? 401)
+  }
+
+  const { data, error } = await supabase.auth.updateUser({ password: payload.password })
+
+  if (error) throw new AppError(error.message, error.status ?? 400)
+  if (!data.user) throw new AppError('Could not update password', 400)
+
+  const user = await syncUser(data.user)
+
+  return { user, session: mapSession(sessionData.session) }
+}
+
 const logoutUser = async (accessToken: string) => {
   const supabase = getSupabaseAdminClient()
   const { error } = await supabase.auth.admin.signOut(accessToken)
@@ -177,5 +207,5 @@ const updateProfile = async (userId: string, updates: UpdateProfilePayload) => {
   return saved
 }
 
-export { getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, loginWithGoogleIdToken, logoutUser, refreshSession, registerUser, updateProfile }
+export { getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, loginWithGoogleIdToken, logoutUser, refreshSession, registerUser, requestPasswordReset, resetPassword, updateProfile }
 

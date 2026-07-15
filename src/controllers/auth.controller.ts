@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { AppError } from '../errors/AppError'
-import { getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, loginWithGoogleIdToken, logoutUser, refreshSession, registerUser, updateProfile } from '../services/auth.service'
-import { GoogleNativePayload, LoginPayload, OAuthProvider, RefreshPayload, RegisterPayload, UpdateProfilePayload } from '../types/auth'
+import { getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, loginWithGoogleIdToken, logoutUser, refreshSession, registerUser, requestPasswordReset, resetPassword as resetPasswordService, updateProfile } from '../services/auth.service'
+import { ForgotPasswordPayload, GoogleNativePayload, LoginPayload, OAuthProvider, RefreshPayload, RegisterPayload, ResetPasswordPayload, UpdateProfilePayload } from '../types/auth'
 import { TypedBodyRequest } from '../types/common'
 import createJsonResponse from '../utils/createJsonResponse'
 
@@ -49,6 +49,39 @@ const googleNative = async (req: TypedBodyRequest<GoogleNativePayload>, res: Res
 
     const result = await loginWithGoogleIdToken(req.body)
     return createJsonResponse(res, { msg: 'Login successful', data: result, status: StatusCodes.OK })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const forgotPassword = async (req: TypedBodyRequest<ForgotPasswordPayload>, res: Response, next: NextFunction) => {
+  try {
+    const { email, redirectTo } = req.body
+    if (!email) throw new AppError('Email is required', StatusCodes.BAD_REQUEST)
+
+    if (redirectTo && !redirectTo.startsWith(MOBILE_REDIRECT_SCHEME) && !redirectTo.startsWith(getFrontendUrl())) {
+      throw new AppError('Invalid redirect target', StatusCodes.BAD_REQUEST)
+    }
+
+    await requestPasswordReset(email, redirectTo ?? `${getFrontendUrl()}/auth/reset-password`)
+    return createJsonResponse(res, {
+      msg: 'If an account exists for that email, a password reset link is on its way',
+      data: null,
+      status: StatusCodes.OK,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const resetPassword = async (req: TypedBodyRequest<ResetPasswordPayload>, res: Response, next: NextFunction) => {
+  try {
+    const { accessToken, refreshToken, password } = req.body
+    if (!accessToken || !refreshToken) throw new AppError('Reset link is invalid or has expired', StatusCodes.UNAUTHORIZED)
+    if (!password || password.length < 6) throw new AppError('Password must be at least 6 characters', StatusCodes.BAD_REQUEST)
+
+    const result = await resetPasswordService({ accessToken, refreshToken, password })
+    return createJsonResponse(res, { msg: 'Password updated', data: result, status: StatusCodes.OK })
   } catch (error) {
     next(error)
   }
@@ -197,5 +230,5 @@ const oauthCallback = async (req: Request, res: Response, next: NextFunction) =>
   }
 }
 
-export { googleNative, login, logout, me, oauthCallback, oauthRedirect, refresh, register, updateMe }
+export { forgotPassword, googleNative, login, logout, me, oauthCallback, oauthRedirect, refresh, register, resetPassword, updateMe }
 

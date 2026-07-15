@@ -29,6 +29,17 @@ export type GoogleNativePayload = {
   nonce?: string
 }
 
+export type ForgotPasswordPayload = {
+  email: string
+  redirectTo?: string
+}
+
+export type ResetPasswordPayload = {
+  accessToken: string
+  refreshToken: string
+  password: string
+}
+
 export type UpdateProfilePayload = {
   avatarUrl?: string
   displayName?: string
