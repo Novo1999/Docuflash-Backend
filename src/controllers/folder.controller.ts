@@ -2,7 +2,7 @@ import crypto from 'crypto'
 import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { AppError } from '../errors/AppError'
-import { addFilesToRequestService, createFolderService, createUploadRequestService, deleteFolderByIdService, deleteFolderByTokenService, getFolderByIdService, getFolderByTokenService, getFoldersByOwner, unlockFolderService } from '../services/folder.service'
+import { addFilesToRequestService, createFolderService, createUploadRequestService, deleteFolderByIdService, deleteFolderByTokenService, getFolderByIdService, getFolderByTokenService, getFoldersByOwner, moveFileToFolderService, unlockFolderService } from '../services/folder.service'
 import { TypedBodyRequest } from '../types/common'
 import { AttachRequestFilesPayload, FolderPayload, UploadRequestPayload } from '../types/folder'
 import createJsonResponse from '../utils/createJsonResponse'
@@ -122,6 +122,31 @@ const unlockFolder = async (req: Request<{ password: string, token: string }>, r
   }
 }
 
+const moveFileToFolder = async (req: Request<{ id: string }, unknown, { fileId: string }>, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      throw new AppError('Authentication required', StatusCodes.UNAUTHORIZED)
+    }
+
+    const { fileId } = req.body
+    if (!fileId) {
+      throw new AppError('fileId is required', StatusCodes.BAD_REQUEST)
+    }
+
+    const folder = await moveFileToFolderService(req.params.id, fileId, req.user.id)
+
+    const safeFiles = folder.files.map((file) => {
+      const { password, storageKey, deviceInfo, clientId, masterEncryptedStorageKey, salt, ...fileRest } = file
+      return fileRest
+    })
+    const { password, ...folderRest } = folder
+
+    return createJsonResponse(res, { msg: 'File moved to folder', data: { ...folderRest, files: safeFiles }, status: StatusCodes.OK })
+  } catch (error) {
+    next(error)
+  }
+}
+
 const getMyFolders = async (req: Request, res: Response, next: NextFunction) => {
   try {
     if (!req.user) {
@@ -142,5 +167,5 @@ const getMyFolders = async (req: Request, res: Response, next: NextFunction) => 
   }
 }
 
-export { attachFilesToRequest, createFolder, createUploadRequest, deleteFolderById, deleteFolderByShareToken, getFolderById, getFolderByShareToken, getMyFolders, unlockFolder }
+export { attachFilesToRequest, createFolder, createUploadRequest, deleteFolderById, deleteFolderByShareToken, getFolderById, getFolderByShareToken, getMyFolders, moveFileToFolder, unlockFolder }
 

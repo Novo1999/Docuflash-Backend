@@ -170,6 +170,37 @@ const getFolderByIdService = async (id: string) => {
   return folder
 }
 
+const moveFileToFolderService = async (folderId: string, fileId: string, ownerId: string) => {
+  const fileRepository = useTypeORM(FileEntity)
+  const folderRepository = useTypeORM(FolderEntity)
+
+  const folder = await folderRepository.findOne({ where: { id: folderId } })
+  if (!folder) throw new AppError('Folder not found', 404)
+  if (folder.ownerId !== ownerId) throw new AppError('You do not have access to this folder', 403)
+
+  const file = await fileRepository.findOne({ where: { id: fileId } })
+  if (!file) throw new AppError('File not found', 404)
+  if (file.ownerId !== ownerId) throw new AppError('You do not have access to this file', 403)
+
+  const currentFolders = await folderRepository
+    .createQueryBuilder('folder')
+    .innerJoin('folder.files', 'file', 'file.id = :fileId', { fileId })
+    .getMany()
+
+  const alreadyInTarget = currentFolders.some((current) => current.id === folderId)
+
+  for (const current of currentFolders) {
+    if (current.id === folderId) continue
+    await folderRepository.createQueryBuilder().relation(FolderEntity, 'files').of(current.id).remove(fileId)
+  }
+
+  if (!alreadyInTarget) {
+    await folderRepository.createQueryBuilder().relation(FolderEntity, 'files').of(folderId).add(fileId)
+  }
+
+  return getFolderByIdService(folderId)
+}
+
 const getFoldersByOwner = async (ownerId: string, search?: string) => {
   const where: FindOptionsWhere<FolderEntity> = { ownerId }
   const term = search?.trim()
@@ -233,5 +264,5 @@ const deleteExpiredRequestFolders = async () => {
   return { deleted: expiredFolders.length }
 }
 
-export { addFilesToRequestService, createFolderService, createUploadRequestService, deleteExpiredRequestFolders, deleteFolderByIdService, deleteFolderByTokenService, getFolderByIdService, getFolderByTokenService, getFoldersByOwner, unlockFolderService }
+export { addFilesToRequestService, createFolderService, createUploadRequestService, deleteExpiredRequestFolders, deleteFolderByIdService, deleteFolderByTokenService, getFolderByIdService, getFolderByTokenService, getFoldersByOwner, moveFileToFolderService, unlockFolderService }
 
