@@ -5,7 +5,7 @@ export class NoteEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   title!: string | null
 
   @Column({ type: 'text', default: '' })
