@@ -175,7 +175,7 @@ const buildSeedFiles = (): SeedFileSpec[] => {
     '----------------------',
     'Post 1: Files that vanish on your schedule. Share smarter with Docuflash.',
     'Post 2: Password-protect any link in one tap.',
-    'Post 3: New: request files from anyone — no account needed.',
+    'Post 3: New: upload to me — get files from anyone, no account needed.',
     'CTA: docuflash-frontend.vercel.app',
   ])
 

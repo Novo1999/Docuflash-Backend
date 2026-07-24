@@ -77,20 +77,20 @@ const createUploadRequestService = async (payload: { folderName?: string, shareT
   const accessType = payload.accessType ?? AccessType.PUBLIC
 
   if (await hasActiveRequestOfType({ clientId: payload.clientId, ownerId: payload.ownerId, accessType })) {
-    throw new AppError(`You already have an active ${accessType} file request. Resume or end it before creating a new one.`, 409)
+    throw new AppError(`You already have an active ${accessType} upload link. Resume or end it before creating a new one.`, 409)
   }
 
   let hashedPassword: string | undefined
 
   if (accessType === AccessType.PROTECTED) {
-    if (!payload.password) throw new AppError('A password is required for protected requests', 400)
+    if (!payload.password) throw new AppError('A password is required for protected links', 400)
 
     const salt = bcrypt.genSaltSync(10)
     hashedPassword = bcrypt.hashSync(payload.password, salt)
   }
 
   const folder = folderRepository.create({
-    folderName: payload.folderName?.trim() || 'File request',
+    folderName: payload.folderName?.trim() || 'Upload to me',
     shareToken: payload.shareToken,
     files: [],
     accessType,
