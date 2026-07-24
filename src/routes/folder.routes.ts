@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { attachFilesToRequest, createFolder, createUploadRequest, deleteFolderById, deleteFolderByShareToken, getFolderById, getFolderByShareToken, getMyFolders, moveFileToFolder, unlockFolder } from '../controllers/folder.controller'
+import { attachFilesToRequest, createFolder, createUploadRequest, deleteFolderById, deleteFolderByShareToken, getFolderById, getFolderByShareToken, getMyFolders, getMyRequests, moveFileToFolder, unlockFolder } from '../controllers/folder.controller'
 import { optionalAuth, requireAuth } from '../middleware/auth'
 
 const router = Router()
@@ -10,6 +10,7 @@ router.post('/token/:token/files', attachFilesToRequest)
 router.post('/:id/files', requireAuth, moveFileToFolder)
 router.post('/token/:token/unlock', unlockFolder)
 router.get('/mine', requireAuth, getMyFolders)
+router.get('/requests', optionalAuth, getMyRequests)
 router.get('/:id', getFolderById)
 router.get('/token/:token', getFolderByShareToken)
 router.delete('/:id', deleteFolderById)

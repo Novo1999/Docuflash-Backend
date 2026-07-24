@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs'
-import { FindOptionsWhere, ILike, LessThanOrEqual } from 'typeorm'
+import { Brackets, FindOptionsWhere, ILike, LessThanOrEqual, SelectQueryBuilder } from 'typeorm'
 import { useTypeORM } from '../data-source'
 import { FileEntity } from '../entity/file.entity'
 import { FolderEntity } from '../entity/folder.entity'
@@ -39,10 +39,46 @@ const createFolderService = async (payload: FolderPayload) => {
   return folderRepository.save(folder)
 }
 
+const requestOwnerScope = (qb: SelectQueryBuilder<FolderEntity>, clientId?: string, ownerId?: string | null) =>
+  qb.andWhere(
+    new Brackets((where) => {
+      if (clientId) where.orWhere('folder.clientId = :clientId', { clientId })
+      if (ownerId) where.orWhere('folder.ownerId = :ownerId', { ownerId })
+    }),
+  )
+
+const hasActiveRequestOfType = async ({ clientId, ownerId, accessType }: { clientId?: string, ownerId?: string | null, accessType: AccessType }) => {
+  if (!clientId && !ownerId) return false
+
+  const qb = useTypeORM(FolderEntity)
+    .createQueryBuilder('folder')
+    .where('folder.acceptsUploads = :accepts', { accepts: true })
+    .andWhere('folder.expireAt > :now', { now: new Date() })
+    .andWhere('folder.accessType = :accessType', { accessType })
+
+  return (await requestOwnerScope(qb, clientId, ownerId).getCount()) > 0
+}
+
+const getActiveRequestsService = async ({ clientId, ownerId }: { clientId?: string, ownerId?: string | null }) => {
+  if (!clientId && !ownerId) return []
+
+  const qb = useTypeORM(FolderEntity)
+    .createQueryBuilder('folder')
+    .loadRelationCountAndMap('folder.fileCount', 'folder.files')
+    .where('folder.acceptsUploads = :accepts', { accepts: true })
+    .andWhere('folder.expireAt > :now', { now: new Date() })
+
+  return requestOwnerScope(qb, clientId, ownerId).orderBy('folder.createdAt', 'DESC').getMany()
+}
+
 const createUploadRequestService = async (payload: { folderName?: string, shareToken: string, ownerId?: string | null, clientId?: string, accessType?: AccessType, password?: string }) => {
   const folderRepository = useTypeORM(FolderEntity)
 
   const accessType = payload.accessType ?? AccessType.PUBLIC
+
+  if (await hasActiveRequestOfType({ clientId: payload.clientId, ownerId: payload.ownerId, accessType })) {
+    throw new AppError(`You already have an active ${accessType} file request. Resume or end it before creating a new one.`, 409)
+  }
 
   let hashedPassword: string | undefined
 
@@ -264,5 +300,5 @@ const deleteExpiredRequestFolders = async () => {
   return { deleted: expiredFolders.length }
 }
 
-export { addFilesToRequestService, createFolderService, createUploadRequestService, deleteExpiredRequestFolders, deleteFolderByIdService, deleteFolderByTokenService, getFolderByIdService, getFolderByTokenService, getFoldersByOwner, moveFileToFolderService, unlockFolderService }
+export { addFilesToRequestService, createFolderService, createUploadRequestService, deleteExpiredRequestFolders, deleteFolderByIdService, deleteFolderByTokenService, getActiveRequestsService, getFolderByIdService, getFolderByTokenService, getFoldersByOwner, moveFileToFolderService, unlockFolderService }
 
