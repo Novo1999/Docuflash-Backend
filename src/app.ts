@@ -10,6 +10,7 @@ import { apiLimiter, authLimiter, xssSanitizer } from './middleware/security'
 import authRouter from './routes/auth.routes'
 import fileRouter from './routes/file.routes'
 import folderRouter from './routes/folder.routes'
+import networkRouter from './routes/network.routes'
 import noteRouter from './routes/note.routes'
 import { uploadThingRouter } from './routes/uploadthing.routes'
 import { deleteStorageFiles } from './utils/storage'
@@ -47,6 +48,7 @@ app.use('/api/uploadthing', uploadThingRouter)
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
+app.use('/api/network', networkRouter)
 app.use(async (req, res, next) => {
   try {
     if (!AppDataSource.isInitialized) {
