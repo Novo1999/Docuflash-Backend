@@ -4,6 +4,7 @@ export enum FileType {
   TXT = 'txt',
   ZIP = 'zip',
   DOCX = 'docx',
+  OTHER = 'other',
 }
 
 export type DeviceInfo = {
