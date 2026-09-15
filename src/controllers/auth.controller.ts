@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { AppError } from '../errors/AppError'
-import { getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, loginWithGoogleIdToken, logoutUser, refreshSession, registerUser, requestPasswordReset, resetPassword as resetPasswordService, updateProfile } from '../services/auth.service'
+import { deleteAccount, getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, loginWithGoogleIdToken, logoutUser, refreshSession, registerUser, requestPasswordReset, resetPassword as resetPasswordService, updateProfile } from '../services/auth.service'
 import { ForgotPasswordPayload, GoogleNativePayload, LoginPayload, OAuthProvider, RefreshPayload, RegisterPayload, ResetPasswordPayload, UpdateProfilePayload } from '../types/auth'
 import { TypedBodyRequest } from '../types/common'
 import createJsonResponse from '../utils/createJsonResponse'
@@ -155,6 +155,17 @@ const updateMe = async (req: TypedBodyRequest<UpdateProfilePayload>, res: Respon
   }
 }
 
+const deleteMe = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new AppError('Authentication required', StatusCodes.UNAUTHORIZED)
+
+    const result = await deleteAccount(req.user.id)
+    return createJsonResponse(res, { msg: 'Account deleted', data: result, status: StatusCodes.OK })
+  } catch (error) {
+    next(error)
+  }
+}
+
 const oauthRedirect = async (req: Request<{ provider: string }>, res: Response, next: NextFunction) => {
   try {
     const provider = req.params.provider as OAuthProvider
@@ -230,5 +241,5 @@ const oauthCallback = async (req: Request, res: Response, next: NextFunction) =>
   }
 }
 
-export { forgotPassword, googleNative, login, logout, me, oauthCallback, oauthRedirect, refresh, register, resetPassword, updateMe }
+export { deleteMe, forgotPassword, googleNative, login, logout, me, oauthCallback, oauthRedirect, refresh, register, resetPassword, updateMe }
 

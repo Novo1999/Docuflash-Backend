@@ -1,8 +1,12 @@
 import { Session, User } from '@supabase/supabase-js'
 import { useTypeORM } from '../data-source'
+import { FileEntity } from '../entity/file.entity'
+import { FolderEntity } from '../entity/folder.entity'
+import { NoteEntity } from '../entity/note.entity'
 import { UserEntity } from '../entity/user.entity'
 import { AppError } from '../errors/AppError'
 import { GoogleNativePayload, LoginPayload, OAuthProvider, RegisterPayload, ResetPasswordPayload, UpdateProfilePayload } from '../types/auth'
+import { decryptStorageKey } from '../utils/fileProtection'
 import { deleteStorageFiles, extractUploadThingKey } from '../utils/storage'
 import { getSupabaseAdminClient, getSupabaseAuthClient, getSupabaseOAuthClient, MemoryStorage } from '../utils/supabase'
 
@@ -207,5 +211,58 @@ const updateProfile = async (userId: string, updates: UpdateProfilePayload) => {
   return saved
 }
 
-export { getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, loginWithGoogleIdToken, logoutUser, refreshSession, registerUser, requestPasswordReset, resetPassword, updateProfile }
+const collectStorageKeys = (files: FileEntity[]) => {
+  const keys: string[] = []
+
+  for (const file of files) {
+    if (!file.masterEncryptedStorageKey) continue
+    try {
+      keys.push(decryptStorageKey(file.masterEncryptedStorageKey, process.env.MASTER_ENCRYPTION_KEY!, process.env.MASTER_SALT!))
+    } catch (error) {
+      console.error('Skipping undecryptable storage key while deleting account', { fileId: file.id, error })
+    }
+  }
+
+  return keys
+}
+
+const deleteAccount = async (userId: string) => {
+  const userRepository = useTypeORM(UserEntity)
+  const fileRepository = useTypeORM(FileEntity)
+  const folderRepository = useTypeORM(FolderEntity)
+  const noteRepository = useTypeORM(NoteEntity)
+
+  const user = await userRepository.findOneBy({ id: userId })
+  if (!user) throw new AppError('User not found', 404)
+
+  const folders = await folderRepository.find({ where: { ownerId: userId }, relations: { files: true } })
+  const ownedFiles = await fileRepository.find({ where: { ownerId: userId } })
+
+  const filesById = new Map<string, FileEntity>()
+  for (const file of ownedFiles) filesById.set(file.id, file)
+  for (const folder of folders) {
+    for (const file of folder.files ?? []) filesById.set(file.id, file)
+  }
+
+  const files = [...filesById.values()]
+  const storageKeys = collectStorageKeys(files)
+
+  const avatarKey = user.avatarUrl ? extractUploadThingKey(user.avatarUrl) : null
+  if (avatarKey) storageKeys.push(avatarKey)
+
+  await deleteStorageFiles(storageKeys)
+
+  if (files.length) await fileRepository.remove(files)
+  if (folders.length) await folderRepository.remove(folders)
+  await noteRepository.delete({ ownerId: userId })
+  await userRepository.remove(user)
+
+  const supabase = getSupabaseAdminClient()
+  const { error } = await supabase.auth.admin.deleteUser(userId)
+  if (error) throw new AppError(error.message, error.status ?? 500)
+
+  return { filesDeleted: files.length, foldersDeleted: folders.length }
+}
+
+export { deleteAccount, getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, loginWithGoogleIdToken, logoutUser, refreshSession, registerUser, requestPasswordReset, resetPassword, updateProfile }
 
