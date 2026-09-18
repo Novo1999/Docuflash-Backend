@@ -34,6 +34,10 @@ export type ForgotPasswordPayload = {
   redirectTo?: string
 }
 
+export type AccountDeletionRequestPayload = {
+  email: string
+}
+
 export type ResetPasswordPayload = {
   accessToken: string
   refreshToken: string

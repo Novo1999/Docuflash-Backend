@@ -18,6 +18,20 @@ const getSupabaseAuthClient = (): SupabaseClient => {
   })
 }
 
+const requestAccountDeletionVerification = async (email: string, redirectTo: string): Promise<void> => {
+  const supabase = getSupabaseAuthClient()
+
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: redirectTo,
+      shouldCreateUser: false,
+    },
+  })
+
+  if (error) throw new AppError(error.message, error.status ?? 400)
+}
+
 const getSupabaseAdminClient = (): SupabaseClient => {
   assertConfigured()
   if (!SUPABASE_SERVICE_ROLE_KEY) {
@@ -66,4 +80,4 @@ const getSupabaseOAuthClient = (storage: MemoryStorage): SupabaseClient => {
   })
 }
 
-export { getSupabaseAdminClient, getSupabaseAuthClient, getSupabaseOAuthClient, MemoryStorage }
+export { getSupabaseAdminClient, getSupabaseAuthClient, getSupabaseOAuthClient, MemoryStorage, requestAccountDeletionVerification }

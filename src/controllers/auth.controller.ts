@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { AppError } from '../errors/AppError'
-import { deleteAccount, getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, loginWithGoogleIdToken, logoutUser, refreshSession, registerUser, requestPasswordReset, resetPassword as resetPasswordService, updateProfile } from '../services/auth.service'
-import { ForgotPasswordPayload, GoogleNativePayload, LoginPayload, OAuthProvider, RefreshPayload, RegisterPayload, ResetPasswordPayload, UpdateProfilePayload } from '../types/auth'
+import { deleteAccount, getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, loginWithGoogleIdToken, logoutUser, refreshSession, registerUser, requestPasswordReset, requestVerifiedAccountDeletion, resetPassword as resetPasswordService, updateProfile } from '../services/auth.service'
+import { AccountDeletionRequestPayload, ForgotPasswordPayload, GoogleNativePayload, LoginPayload, OAuthProvider, RefreshPayload, RegisterPayload, ResetPasswordPayload, UpdateProfilePayload } from '../types/auth'
 import { TypedBodyRequest } from '../types/common'
 import createJsonResponse from '../utils/createJsonResponse'
 
@@ -17,6 +17,7 @@ type OAuthStateCookie = {
 
 const getFrontendUrl = () => process.env.FRONTEND_URL || 'http://localhost:3000'
 const getBackendUrl = () => process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`
+const getAccountDeletionRedirectUrl = () => new URL('/delete-account/confirm', getFrontendUrl()).toString()
 
 const register = async (req: TypedBodyRequest<RegisterPayload>, res: Response, next: NextFunction) => {
   try {
@@ -66,6 +67,22 @@ const forgotPassword = async (req: TypedBodyRequest<ForgotPasswordPayload>, res:
     await requestPasswordReset(email, redirectTo ?? `${getFrontendUrl()}/auth/reset-password`)
     return createJsonResponse(res, {
       msg: 'If an account exists for that email, a password reset link is on its way',
+      data: null,
+      status: StatusCodes.OK,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const requestAccountDeletion = async (req: TypedBodyRequest<AccountDeletionRequestPayload>, res: Response, next: NextFunction) => {
+  try {
+    const { email } = req.body
+    if (!email || typeof email !== 'string') throw new AppError('Email is required', StatusCodes.BAD_REQUEST)
+
+    await requestVerifiedAccountDeletion(email, getAccountDeletionRedirectUrl())
+    return createJsonResponse(res, {
+      msg: 'If an account exists for that email, a verification link is on its way.',
       data: null,
       status: StatusCodes.OK,
     })
@@ -241,5 +258,5 @@ const oauthCallback = async (req: Request, res: Response, next: NextFunction) =>
   }
 }
 
-export { deleteMe, forgotPassword, googleNative, login, logout, me, oauthCallback, oauthRedirect, refresh, register, resetPassword, updateMe }
+export { deleteMe, forgotPassword, googleNative, login, logout, me, oauthCallback, oauthRedirect, refresh, register, requestAccountDeletion, resetPassword, updateMe }
 

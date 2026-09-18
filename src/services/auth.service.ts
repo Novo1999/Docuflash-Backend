@@ -8,7 +8,7 @@ import { AppError } from '../errors/AppError'
 import { GoogleNativePayload, LoginPayload, OAuthProvider, RegisterPayload, ResetPasswordPayload, UpdateProfilePayload } from '../types/auth'
 import { decryptStorageKey } from '../utils/fileProtection'
 import { deleteStorageFiles, extractUploadThingKey } from '../utils/storage'
-import { getSupabaseAdminClient, getSupabaseAuthClient, getSupabaseOAuthClient, MemoryStorage } from '../utils/supabase'
+import { getSupabaseAdminClient, getSupabaseAuthClient, getSupabaseOAuthClient, MemoryStorage, requestAccountDeletionVerification } from '../utils/supabase'
 
 const mapSession = (session: Session) => ({
   accessToken: session.access_token,
@@ -115,6 +115,10 @@ const requestPasswordReset = async (email: string, redirectTo: string) => {
   const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
 
   if (error) throw new AppError(error.message, error.status ?? 400)
+}
+
+const requestVerifiedAccountDeletion = async (email: string, redirectTo: string) => {
+  await requestAccountDeletionVerification(email, redirectTo)
 }
 
 const resetPassword = async (payload: ResetPasswordPayload) => {
@@ -264,5 +268,5 @@ const deleteAccount = async (userId: string) => {
   return { filesDeleted: files.length, foldersDeleted: folders.length }
 }
 
-export { deleteAccount, getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, loginWithGoogleIdToken, logoutUser, refreshSession, registerUser, requestPasswordReset, resetPassword, updateProfile }
+export { deleteAccount, getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, loginWithGoogleIdToken, logoutUser, refreshSession, registerUser, requestPasswordReset, requestVerifiedAccountDeletion, resetPassword, updateProfile }
 
