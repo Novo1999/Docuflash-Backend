@@ -12,7 +12,7 @@ router.post('/token/:token/unlock', unlockFolder)
 router.get('/mine', requireAuth, getMyFolders)
 router.get('/requests', optionalAuth, getMyRequests)
 router.get('/:id', getFolderById)
-router.get('/token/:token', getFolderByShareToken)
+router.get('/token/:token', optionalAuth, getFolderByShareToken)
 router.delete('/:id', deleteFolderById)
 router.delete('/token/:token', deleteFolderByShareToken)
 

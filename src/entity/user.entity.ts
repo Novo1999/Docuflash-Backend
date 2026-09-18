@@ -23,6 +23,12 @@ export class UserEntity {
   @Column({ type: 'varchar', default: 'protected' })
   defaultPrivacy!: 'public' | 'protected'
 
+  @Column({ type: 'timestamp', nullable: true })
+  termsAcceptedAt!: Date | null
+
+  @Column({ type: 'varchar', nullable: true })
+  termsVersion!: string | null
+
   @CreateDateColumn()
   createdAt!: Date
 

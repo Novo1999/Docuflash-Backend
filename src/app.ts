@@ -10,6 +10,7 @@ import { apiLimiter, authLimiter, xssSanitizer } from './middleware/security'
 import authRouter from './routes/auth.routes'
 import fileRouter from './routes/file.routes'
 import folderRouter from './routes/folder.routes'
+import moderationRouter from './routes/moderation.routes'
 import networkRouter from './routes/network.routes'
 import noteRouter from './routes/note.routes'
 import { uploadThingRouter } from './routes/uploadthing.routes'
@@ -63,6 +64,7 @@ app.use('/api/auth', authLimiter, authRouter)
 app.use('/api/files', fileRouter)
 app.use('/api/folders', folderRouter)
 app.use('/api/notes', noteRouter)
+app.use('/api/moderation', moderationRouter)
 
 app.use(errorHandler)
 

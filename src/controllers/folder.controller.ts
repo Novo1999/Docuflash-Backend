@@ -3,7 +3,7 @@ import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { FolderEntity } from '../entity/folder.entity'
 import { AppError } from '../errors/AppError'
-import { addFilesToRequestService, createFolderService, createUploadRequestService, deleteFolderByIdService, deleteFolderByTokenService, getActiveRequestsService, getFolderByIdService, getFolderByTokenService, getFoldersByOwner, moveFileToFolderService, unlockFolderService } from '../services/folder.service'
+import { addFilesToRequestService, createFolderService, createUploadRequestService, deleteFolderByIdService, deleteFolderByTokenService, getActiveRequestsService, getFolderByIdService, getFolderByTokenService, getFoldersByOwner, getRequestOwnershipByToken, moveFileToFolderService, unlockFolderService } from '../services/folder.service'
 import { TypedBodyRequest } from '../types/common'
 import { AttachRequestFilesPayload, FolderPayload, UploadRequestPayload } from '../types/folder'
 import createJsonResponse from '../utils/createJsonResponse'
@@ -60,14 +60,20 @@ const getFolderByShareToken = async (req: Request<{ token: string }>, res: Respo
   try {
     const folder = await getFolderByTokenService(req.params.token)
 
+    const ownership = await getRequestOwnershipByToken(req.params.token)
+    const callerClientId = typeof req.query.clientId === 'string' ? req.query.clientId : undefined
+    const isRequestOwner = Boolean(
+      ownership?.acceptsUploads && ((req.user && ownership.ownerId === req.user.id) || (callerClientId && ownership.clientId === callerClientId)),
+    )
+
     const safeFiles = folder.files.map((file) => {
       const { password, storageKey, deviceInfo, clientId, masterEncryptedStorageKey, ...fileRest } = file
-      return fileRest
+      return isRequestOwner ? { ...fileRest, senderClientId: clientId } : fileRest
     })
 
     return createJsonResponse(res, {
       msg: 'Folder fetched successfully',
-      data: { ...folder, files: safeFiles },
+      data: { ...folder, files: safeFiles, ...(isRequestOwner ? { id: ownership!.id, isRequestOwner: true } : {}) },
       status: StatusCodes.OK,
     })
   } catch (error) {

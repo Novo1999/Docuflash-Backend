@@ -1,7 +1,8 @@
 import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
+import { CURRENT_TERMS_VERSION } from '../constants'
 import { AppError } from '../errors/AppError'
-import { deleteAccount, getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, loginWithGoogleIdToken, logoutUser, refreshSession, registerUser, requestPasswordReset, requestVerifiedAccountDeletion, resetPassword as resetPasswordService, updateProfile } from '../services/auth.service'
+import { acceptTerms as acceptTermsService, deleteAccount, getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, loginWithGoogleIdToken, logoutUser, refreshSession, registerUser, requestPasswordReset, requestVerifiedAccountDeletion, resetPassword as resetPasswordService, updateProfile } from '../services/auth.service'
 import { AccountDeletionRequestPayload, ForgotPasswordPayload, GoogleNativePayload, LoginPayload, OAuthProvider, RefreshPayload, RegisterPayload, ResetPasswordPayload, UpdateProfilePayload } from '../types/auth'
 import { TypedBodyRequest } from '../types/common'
 import createJsonResponse from '../utils/createJsonResponse'
@@ -134,7 +135,26 @@ const me = async (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) throw new AppError('Authentication required', StatusCodes.UNAUTHORIZED)
 
     const user = await getCurrentUser(req.user.id)
-    return createJsonResponse(res, { msg: 'User fetched', data: user, status: StatusCodes.OK })
+    return createJsonResponse(res, {
+      msg: 'User fetched',
+      data: { ...user, currentTermsVersion: CURRENT_TERMS_VERSION },
+      status: StatusCodes.OK,
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+const acceptTerms = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw new AppError('Authentication required', StatusCodes.UNAUTHORIZED)
+
+    const user = await acceptTermsService(req.user.id, CURRENT_TERMS_VERSION)
+    return createJsonResponse(res, {
+      msg: 'Terms accepted',
+      data: { ...user, currentTermsVersion: CURRENT_TERMS_VERSION },
+      status: StatusCodes.OK,
+    })
   } catch (error) {
     next(error)
   }
@@ -258,5 +278,5 @@ const oauthCallback = async (req: Request, res: Response, next: NextFunction) =>
   }
 }
 
-export { deleteMe, forgotPassword, googleNative, login, logout, me, oauthCallback, oauthRedirect, refresh, register, requestAccountDeletion, resetPassword, updateMe }
+export { acceptTerms, deleteMe, forgotPassword, googleNative, login, logout, me, oauthCallback, oauthRedirect, refresh, register, requestAccountDeletion, resetPassword, updateMe }
 

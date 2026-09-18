@@ -58,3 +58,11 @@ export const accountDeletionRequestLimiter = rateLimit({
   legacyHeaders: false,
   handler: rateLimitHandler,
 })
+
+export const reportLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: rateLimitHandler,
+})

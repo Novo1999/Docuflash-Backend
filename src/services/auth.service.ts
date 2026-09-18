@@ -184,6 +184,17 @@ const getCurrentUser = async (userId: string) => {
   return user
 }
 
+const acceptTerms = async (userId: string, version: string) => {
+  const userRepository = useTypeORM(UserEntity)
+  const user = await userRepository.findOneBy({ id: userId })
+  if (!user) throw new AppError('User not found', 404)
+
+  user.termsVersion = version
+  user.termsAcceptedAt = new Date()
+
+  return userRepository.save(user)
+}
+
 const updateProfile = async (userId: string, updates: UpdateProfilePayload) => {
   const userRepository = useTypeORM(UserEntity)
   const user = await userRepository.findOneBy({ id: userId })
@@ -268,5 +279,5 @@ const deleteAccount = async (userId: string) => {
   return { filesDeleted: files.length, foldersDeleted: folders.length }
 }
 
-export { deleteAccount, getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, loginWithGoogleIdToken, logoutUser, refreshSession, registerUser, requestPasswordReset, requestVerifiedAccountDeletion, resetPassword, updateProfile }
+export { acceptTerms, deleteAccount, getCurrentUser, getOAuthUrl, handleOAuthCallback, loginUser, loginWithGoogleIdToken, logoutUser, refreshSession, registerUser, requestPasswordReset, requestVerifiedAccountDeletion, resetPassword, updateProfile }
 

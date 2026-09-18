@@ -9,6 +9,7 @@ import { FolderPayload, RequestFilePayload } from '../types/folder'
 import { decryptStorageKey } from '../utils/fileProtection'
 import { deleteStorageFiles } from '../utils/storage'
 import { uploadFileService } from './file.service'
+import { isSenderBlocked } from './moderation.service'
 
 const REQUEST_EXPIRY_MS = 2 * 60 * 60 * 1000
 
@@ -124,6 +125,12 @@ const addFilesToRequestService = async (token: string, files: RequestFilePayload
     if (!isValid) throw new AppError('Invalid password', 401)
   }
 
+  for (const senderClientId of new Set(files.map((file) => file.clientId))) {
+    if (await isSenderBlocked(folder.id, senderClientId)) {
+      throw new AppError('You can no longer upload to this link', 403)
+    }
+  }
+
   const expireAt = new Date(Date.now() + REQUEST_EXPIRY_MS)
 
   const savedFiles: FileEntity[] = []
@@ -147,6 +154,13 @@ const addFilesToRequestService = async (token: string, files: RequestFilePayload
   await folderRepository.save(folder)
 
   return savedFiles
+}
+
+const getRequestOwnershipByToken = async (token: string) => {
+  return useTypeORM(FolderEntity).findOne({
+    where: { shareToken: token },
+    select: { id: true, ownerId: true, clientId: true, acceptsUploads: true },
+  })
 }
 
 const getFolderByTokenService = async (token: string) => {
@@ -300,5 +314,5 @@ const deleteExpiredRequestFolders = async () => {
   return { deleted: expiredFolders.length }
 }
 
-export { addFilesToRequestService, createFolderService, createUploadRequestService, deleteExpiredRequestFolders, deleteFolderByIdService, deleteFolderByTokenService, getActiveRequestsService, getFolderByIdService, getFolderByTokenService, getFoldersByOwner, moveFileToFolderService, unlockFolderService }
+export { addFilesToRequestService, createFolderService, createUploadRequestService, deleteExpiredRequestFolders, deleteFolderByIdService, deleteFolderByTokenService, getActiveRequestsService, getFolderByIdService, getFolderByTokenService, getFoldersByOwner, getRequestOwnershipByToken, moveFileToFolderService, unlockFolderService }
 
